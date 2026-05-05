@@ -461,17 +461,25 @@
                 const size = 512; // Power of 2
                 const grid = new Array(size * size).fill(0);
                 
+                console.log('[Midpoint] Starting generation with seed:', seed);
+                
                 // Initialize corners
                 grid[0] = rng.next();
                 grid[size - 1] = rng.next();
-                grid[size - 1] = rng.next();
+                grid[(size - 1) * size] = rng.next();  // Fixed: was incorrectly set to grid[size - 1]
                 grid[size * (size - 1) + size - 1] = rng.next();
+                
+                console.log('[Midpoint] Corners initialized:', grid[0], grid[size - 1], grid[(size - 1) * size], grid[size * (size - 1) + size - 1]);
                 
                 let step = size - 1;
                 let roughness = 0.5;
+                let iterations = 0;
                 
                 while (step > 1) {
+                    iterations++;
                     const half = Math.floor(step / 2);
+                    
+                    console.log(`[Midpoint] Iteration ${iterations}, step=${step}, half=${half}, roughness=${roughness}`);
                     
                     // Diamond step
                     for (let y = 0; y < size - 1; y += step) {
@@ -498,9 +506,11 @@
                             if (x >= half) { sum += grid[y * size + (x - half)]; count++; }
                             if (x + half < size) { sum += grid[y * size + (x + half)]; count++; }
                             
-                            const avg = sum / count;
-                            const rand = (rng.next() - 0.5) * roughness;
-                            grid[y * size + x] = avg + rand;
+                            if (count > 0) {
+                                const avg = sum / count;
+                                const rand = (rng.next() - 0.5) * roughness;
+                                grid[y * size + x] = avg + rand;
+                            }
                         }
                     }
                     
@@ -508,14 +518,73 @@
                     roughness *= persistence;
                 }
                 
+                console.log('[Midpoint] Generation complete, iterations:', iterations);
+                
                 // Normalize
                 let min = Infinity, max = -Infinity;
                 for (let i = 0; i < grid.length; i++) {
-                    min = Math.min(min, grid[i]);
-                    max = Math.max(max, grid[i]);
+                    if (!isNaN(grid[i])) {
+                        min = Math.min(min, grid[i]);
+                        max = Math.max(max, grid[i]);
+                    }
                 }
                 
-                return grid.map(v => (v - min) / (max - min));
+                console.log('[Midpoint] Min:', min, 'Max:', max);
+                
+                if (max === min) {
+                    console.warn('[Midpoint] All values are identical!');
+                    return grid.map(() => 0.5);
+                }
+                
+                return grid.map(v => isNaN(v) ? 0.5 : (v - min) / (max - min));
+            },
+
+            // 5. Hybrid (Perlin + Voronoi)
+            hybrid(width, height, seed, scale, octaves, persistence, waterLevel) {
+                console.log('[Hybrid] Starting generation with seed:', seed);
+                
+                // Generate Perlin noise base
+                const perlinData = Algorithms.perlinNoise(width, height, seed, scale, octaves, persistence, waterLevel);
+                
+                // Generate Voronoi regions
+                const rng = new SeededRandom(seed + 1000);
+                const numPoints = Math.floor((width * height) / (scale * scale));
+                const points = [];
+                
+                for (let i = 0; i < numPoints; i++) {
+                    points.push({
+                        x: rng.next() * width,
+                        y: rng.next() * height,
+                        value: rng.next() * 0.3 + 0.85 // Bias toward higher values for variation
+                    });
+                }
+                
+                const data = [];
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const idx = y * width + x;
+                        const perlinValue = perlinData[idx];
+                        
+                        // Find closest Voronoi point
+                        let minDist = Infinity;
+                        let closestValue = 1;
+                        
+                        for (const point of points) {
+                            const dist = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
+                            if (dist < minDist) {
+                                minDist = dist;
+                                closestValue = point.value;
+                            }
+                        }
+                        
+                        // Blend: use Perlin as base, multiply by Voronoi for regional variation
+                        const blended = perlinValue * closestValue;
+                        data.push(Math.min(1, Math.max(0, blended)));
+                    }
+                }
+                
+                console.log('[Hybrid] Generation complete');
+                return data;
             }
         };
 
@@ -604,6 +673,11 @@
                     name: 'Midpoint Displacement',
                     description: 'Fractal algorithm creating realistic mountain ranges and rugged terrain. Classic technique for heightmap generation.',
                     fn: Algorithms.midpointDisplacement
+                },
+                {
+                    name: 'Hybrid (Perlin + Voronoi)',
+                    description: 'Combines smooth Perlin noise base with Voronoi region variations. Best of both worlds: natural terrain with distinct biome regions.',
+                    fn: Algorithms.hybrid
                 }
             ];
             
