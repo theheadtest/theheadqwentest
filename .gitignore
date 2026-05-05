@@ -1,4 +1,1 @@
-```
-# Web artifacts
-*.html
-```
+(index.html is a source file, so no changes needed to .gitignore)
