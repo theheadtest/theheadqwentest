@@ -920,12 +920,13 @@ function drawAzgaar() {
         }
         ctx.closePath();
         
-        const b = showBiomes ? cell.biome : null;
+        const cellData = azCells[i]; // Get the actual cell data with biome/elevation
+        const b = showBiomes ? cellData.biome : null;
         if(b) {
             ctx.fillStyle = `rgb(${b.color.join(',')})`;
         } else {
             // Height map view
-            const e = cell.elevation;
+            const e = cellData.elevation;
             const val = Math.floor(e * 255);
             ctx.fillStyle = `rgb(${val}, ${val}, ${val})`;
         }
