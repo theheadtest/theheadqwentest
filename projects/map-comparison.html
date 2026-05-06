@@ -185,6 +185,7 @@
         #azgaar-canvas {
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             cursor: crosshair;
+            display: block;
         }
         .tooltip {
             position: absolute;
@@ -362,6 +363,9 @@ function switchTab(tabId) {
     if(tabId === 'tab2' && azCells.length === 0) {
         // Initialize azgaar if first time visiting tab
         runAzgaar();
+    } else if(tabId === 'tab2') {
+        // Redraw when switching to tab2 even if already initialized
+        drawAzgaar();
     }
 }
 
@@ -647,6 +651,13 @@ const BIOMES = {
 function initAzgaar() {
     canvas = document.getElementById('azgaar-canvas');
     ctx = canvas.getContext('2d');
+    
+    // Set initial canvas size if not set
+    if(canvas.width === 0 || canvas.height === 0) {
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+    }
     
     // Handle resize
     const resize = () => {
@@ -970,6 +981,8 @@ function drawAzgaar() {
 // Initial Gen for Tab 1
 window.onload = () => {
     generateAll();
+    // Initialize Azgaar tab but don't run until tab is selected
+    initAzgaar();
 };
 
 </script>
