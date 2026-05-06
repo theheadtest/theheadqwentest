@@ -343,10 +343,16 @@ const Perlin = (function() {
             x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
             const u = fade(x), v = fade(y), w = fade(z);
             const A = p[X]+Y, AA = p[A]+Z, AB = p[A+1]+Z, B = p[X+1]+Y, BA = p[B]+Z, BB = p[B+1]+Z;
-            return lerp(w, lerp(v, lerp(u, grad(p[AA], x, y, z), grad(p[BA], x-1, y, z)),
-                                   lerp(u, grad(p[AB], x, y-1, z), grad(p[BB], x-1, y-1, z))),
-                           lerp(v, lerp(u, lerp(u, grad(p[AA+1], x, y, z-1), grad(p[BA+1], x-1, y, z-1)),
-                                   lerp(u, grad(p[AB+1], x, y-1, z-1), grad(p[BB+1], x-1, y-1, z-1)))));
+            return lerp(w,
+                lerp(v,
+                    lerp(u, grad(p[AA], x, y, z), grad(p[BA], x-1, y, z)),
+                    lerp(u, grad(p[AB], x, y-1, z), grad(p[BB], x-1, y-1, z))
+                ),
+                lerp(v,
+                    lerp(u, grad(p[AA+1], x, y, z-1), grad(p[BA+1], x-1, y, z-1)),
+                    lerp(u, grad(p[AB+1], x, y-1, z-1), grad(p[BB+1], x-1, y-1, z-1))
+                )
+            );
         }
     };
 })();
@@ -635,6 +641,7 @@ let azPoints = [];
 let azCells = []; // {x, y, neighbors, elevation, moisture, biome}
 let azDelaunay = null;
 let azVoronoi = null;
+let azRivers = [];
 let showBiomes = true;
 let canvas, ctx;
 let azgaarResizeHandlerAttached = false;
@@ -645,12 +652,23 @@ const BIOMES = {
     OCEAN: { color: [30, 60, 120], name: "Ocean" },
     BEACH: { color: [210, 200, 150], name: "Beach" },
     LAGOON: { color: [100, 200, 200], name: "Lagoon" },
-    GRASS: { color: [50, 180, 50], name: "Grassland" },
-    FOREST: { color: [30, 100, 30], name: "Forest" },
-    DESERT: { color: [200, 180, 100], name: "Desert" },
-    MOUNTAIN: { color: [100, 100, 100], name: "Mountain" },
+    GRASS: { color: [92, 176, 74], name: "Grassland" },
+    FOREST: { color: [39, 125, 53], name: "Forest" },
+    RAINFOREST: { color: [23, 92, 45], name: "Rainforest" },
+    SAVANNA: { color: [168, 170, 75], name: "Savanna" },
+    DESERT: { color: [213, 183, 105], name: "Desert" },
+    TUNDRA: { color: [151, 166, 147], name: "Tundra" },
+    MOUNTAIN: { color: [112, 108, 101], name: "Mountain" },
     SNOW: { color: [240, 240, 250], name: "Snow" }
 };
+
+function clamp01(value) {
+    return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+}
+
+function normalizedNoise(x, y, z = 0) {
+    return clamp01((Perlin.noise(x, y, z) + 1) / 2);
+}
 
 function resizeAzgaarCanvas() {
     if (!canvas) return false;
@@ -701,10 +719,13 @@ function initAzgaar() {
                 tooltip.style.display = 'block';
                 tooltip.style.left = (e.clientX + 15) + 'px';
                 tooltip.style.top = (e.clientY + 15) + 'px';
+                const elevation = Number.isFinite(cell.elevation) ? cell.elevation.toFixed(2) : "n/a";
+                const moisture = Number.isFinite(cell.moisture) ? cell.moisture.toFixed(2) : "n/a";
+                const river = cell.river ? "<br>River: yes" : "";
                 tooltip.innerHTML = `
                     <strong>${cell.biome.name}</strong><br>
-                    Elevation: ${cell.elevation.toFixed(2)}<br>
-                    Moisture: ${cell.moisture.toFixed(2)}
+                    Elevation: ${elevation}<br>
+                    Moisture: ${moisture}${river}
                 `;
             }
         }
@@ -802,6 +823,7 @@ function runAzgaar() {
     azCells = azPoints.map((p, i) => ({
         x: p[0], y: p[1],
         elevation: 0, moisture: 0, biome: BIOMES.OCEAN,
+        river: false,
         neighbors: [] // indices
     }));
     console.log(`[AZGAAR] Initialized ${azCells.length} cells.`);
@@ -813,36 +835,35 @@ function runAzgaar() {
     }
     console.log("[AZGAAR] Neighbor relationships established.");
     
-    // 4. Height Map (Radial + Noise)
-    let elevMin = 1, elevMax = 0;
+    // 4. Height Map (Radial + multi-scale noise)
+    let elevMin = Infinity, elevMax = -Infinity;
+    const seedOffset = rng.next() * 1000;
     for(let i=0; i<numPoints; i++) {
         const dx = (azPoints[i][0] - centerX) / (minDim/2);
         const dy = (azPoints[i][1] - centerY) / (minDim/2);
         const dist = Math.sqrt(dx*dx + dy*dy);
         
-        // Radial falloff (island shape)
-        let h = 1 - (dist / radius); 
-        h = Math.max(0, h);
-        h = h * h; // Sharpen
+        // Radial falloff gives the world a readable island/coastline shape.
+        const island = clamp01(1 - Math.pow(dist / radius, 1.7));
+        const nx = (azPoints[i][0] + seedOffset) / minDim;
+        const ny = (azPoints[i][1] - seedOffset) / minDim;
+        const continents = normalizedNoise(nx * 2.2, ny * 2.2, seedOffset * 0.01);
+        const hills = normalizedNoise(nx * 7.5, ny * 7.5, seedOffset * 0.02);
+        const ridges = 1 - Math.abs(normalizedNoise(nx * 13, ny * 13, seedOffset * 0.03) * 2 - 1);
         
-        // Add Noise
-        if(noiseInt > 0) {
-            const nx = azPoints[i][0] / 100;
-            const ny = azPoints[i][1] / 100;
-            const noise = Perlin.noise(nx, ny, 0);
-            h += noise * noiseInt * 0.5;
-        }
+        let height = island * 0.72 + continents * noiseInt * 0.22 + hills * noiseInt * 0.13 + ridges * noiseInt * 0.10 - 0.18;
+        // Push outer cells below sea level so oceans do not disappear after normalization.
+        height -= Math.max(0, dist - radius * 0.86) * 0.65;
         
-        azCells[i].elevation = Math.max(0, Math.min(1, h));
-        if(azCells[i].elevation < elevMin) elevMin = azCells[i].elevation;
-        if(azCells[i].elevation > elevMax) elevMax = azCells[i].elevation;
+        azCells[i].elevation = height;
+        if(height < elevMin) elevMin = height;
+        if(height > elevMax) elevMax = height;
     }
-    console.log(`[AZGAAR] Height map generated. Elevation range: ${elevMin.toFixed(3)} - ${elevMax.toFixed(3)}`);
-    // Normalize elevation
+    console.log(`[AZGAAR] Raw height map generated. Elevation range: ${elevMin.toFixed(3)} - ${elevMax.toFixed(3)}`);
+    // Normalize while preserving enough low terrain for oceans and beaches.
     const range = elevMax - elevMin || 1;
     for (let i = 0; i < numPoints; i++) {
-        azCells[i].elevation =
-            (azCells[i].elevation - elevMin) / range;
+        azCells[i].elevation = clamp01((azCells[i].elevation - elevMin) / range);
     }
     
     // 5. Moisture Map (Precipitation)
@@ -856,8 +877,11 @@ function runAzgaar() {
         const dx = (azPoints[i][0] - centerX) / (minDim/2);
         const dy = (azPoints[i][1] - centerY) / (minDim/2);
         const dot = dx*wx + dy*wy; // -1 (leeward) to 1 (windward)
-        const baseMoisture = Math.max(0, dot);
-        azCells[i].moisture = baseMoisture * (0.5 + azCells[i].elevation * 0.5);
+        const windwardRain = clamp01((dot + 1) / 2);
+        const localNoise = normalizedNoise((azPoints[i][0] - seedOffset) / 150, (azPoints[i][1] + seedOffset) / 150, 7);
+        const coastalHumidity = azCells[i].elevation < 0.24 ? 0.95 : Math.max(0, 0.45 - azCells[i].elevation * 0.35);
+        const rainShadow = Math.max(0, azCells[i].elevation - 0.58) * 0.55;
+        azCells[i].moisture = clamp01(windwardRain * 0.45 + localNoise * 0.35 + coastalHumidity - rainShadow);
     }
     
     // Diffuse moisture slightly
@@ -873,40 +897,62 @@ function runAzgaar() {
             azCells[i].moisture = sum / count;
         }
     }
-    let moistMin = 1, moistMax = 0;
+    let moistMin = Infinity, moistMax = -Infinity;
+    azCells.forEach(c => {
+        c.moisture = clamp01(c.moisture);
+        if(c.moisture < moistMin) moistMin = c.moisture;
+        if(c.moisture > moistMax) moistMax = c.moisture;
+    });
+    const moistRange = moistMax - moistMin || 1;
+    azCells.forEach(c => c.moisture = clamp01((c.moisture - moistMin) / moistRange));
+    moistMin = Infinity; moistMax = -Infinity;
     azCells.forEach(c => { if(c.moisture < moistMin) moistMin = c.moisture; if(c.moisture > moistMax) moistMax = c.moisture; });
     console.log(`[AZGAAR] Moisture map generated. Range: ${moistMin.toFixed(3)} - ${moistMax.toFixed(3)}`);
     
-    // 6. Rivers (Erosion)
-    for(let r=0; r<riverCount; r++) {
-        // Start at high elevation
-        let start = -1, maxH = -1;
-        for(let i=0; i<numPoints; i++) {
-            if(azCells[i].elevation > 0.6 && azCells[i].elevation > maxH) {
-                maxH = azCells[i].elevation;
-                start = i;
-            }
-        }
-        if(start === -1) continue;
-        
-        let curr = start;
-        while(azCells[curr].elevation > 0.2) { // Stop at lowlands
-            azCells[curr].elevation -= 0.05; // Carve
-            if(azCells[curr].elevation < 0) azCells[curr].elevation = 0;
-            
-            // Flow to lowest neighbor
-            let next = -1, minH = azCells[curr].elevation;
-            for(let n of azCells[curr].neighbors) {
-                if(azCells[n].elevation < minH) {
-                    minH = azCells[n].elevation;
+    // 6. Rivers (downhill paths + light erosion)
+    azRivers = [];
+    azCells.forEach(c => c.river = false);
+    const sources = azCells
+        .map((cell, index) => ({ index, score: cell.elevation + cell.moisture * 0.2 + rng.next() * 0.15 }))
+        .filter(({index}) => azCells[index].elevation > 0.48 && azCells[index].moisture > 0.18)
+        .sort((a, b) => b.score - a.score);
+
+    for(let r=0; r<riverCount && sources.length > 0; r++) {
+        const source = sources.shift();
+        let curr = source.index;
+        const path = [curr];
+        const visited = new Set([curr]);
+
+        for(let step=0; step<80; step++) {
+            const current = azCells[curr];
+            current.river = true;
+            current.moisture = clamp01(current.moisture + 0.25);
+            current.elevation = clamp01(current.elevation - 0.015);
+
+            if(current.elevation < 0.20) break;
+
+            let next = -1;
+            let bestScore = Infinity;
+            for(let n of current.neighbors) {
+                if(visited.has(n)) continue;
+                // Prefer downhill flow, but allow small side moves to escape local bowls.
+                const slopePenalty = azCells[n].elevation > current.elevation ? 0.35 : 0;
+                const score = azCells[n].elevation + slopePenalty - azCells[n].moisture * 0.04 + rng.next() * 0.03;
+                if(score < bestScore) {
+                    bestScore = score;
                     next = n;
                 }
             }
-            if(next === -1 || next === curr) break;
+
+            if(next === -1) break;
             curr = next;
+            visited.add(curr);
+            path.push(curr);
         }
+
+        if(path.length > 3) azRivers.push(path);
     }
-    console.log(`[AZGAAR] River erosion complete (${riverCount} rivers).`);
+    console.log(`[AZGAAR] River generation complete (${azRivers.length}/${riverCount} rivers).`);
     
     // 7. Assign Biomes
     const legendSet = new Set();
@@ -916,15 +962,18 @@ function runAzgaar() {
         const e = c.elevation;
         const m = c.moisture;
         
-        if(e < 0.15) { c.biome = BIOMES.OCEAN; oceanCount++; }
-        else if(e < 0.2) { c.biome = BIOMES.BEACH; landCount++; }
-        else if(e > 0.8) { c.biome = BIOMES.SNOW; landCount++; }
-        else if(e > 0.6) { c.biome = BIOMES.MOUNTAIN; landCount++; }
+        if(e < 0.10) { c.biome = BIOMES.DEEP_OCEAN; oceanCount++; }
+        else if(e < 0.18) { c.biome = BIOMES.OCEAN; oceanCount++; }
+        else if(e < 0.23) { c.biome = m > 0.75 ? BIOMES.LAGOON : BIOMES.BEACH; landCount++; }
+        else if(e > 0.86) { c.biome = BIOMES.SNOW; landCount++; }
+        else if(e > 0.68) { c.biome = m < 0.35 ? BIOMES.MOUNTAIN : BIOMES.TUNDRA; landCount++; }
         else {
             landCount++;
-            if(m < 0.2) c.biome = BIOMES.DESERT;
-            else if(m < 0.5) c.biome = BIOMES.GRASS;
-            else c.biome = BIOMES.FOREST;
+            if(m < 0.18) c.biome = BIOMES.DESERT;
+            else if(m < 0.36) c.biome = BIOMES.SAVANNA;
+            else if(m < 0.62) c.biome = BIOMES.GRASS;
+            else if(m < 0.84) c.biome = BIOMES.FOREST;
+            else c.biome = BIOMES.RAINFOREST;
         }
         legendSet.add(c.biome.name);
     }
@@ -956,7 +1005,7 @@ function updateLegend(set) {
     const container = document.getElementById('az-legend');
     container.innerHTML = '';
     // Order matters
-    const order = ["Deep Ocean", "Ocean", "Beach", "Lagoon", "Grassland", "Forest", "Desert", "Mountain", "Snow"];
+    const order = ["Deep Ocean", "Ocean", "Beach", "Lagoon", "Desert", "Savanna", "Grassland", "Forest", "Rainforest", "Tundra", "Mountain", "Snow"];
     
     order.forEach(name => {
         if(set.has(name)) {
@@ -1008,12 +1057,28 @@ function drawAzgaar() {
         ctx.stroke();
     }
     
-    // Draw Rivers (simple lines between low points? Or just rely on carved elevation)
-    // Visualizing rivers explicitly requires tracking flow paths, skipping for brevity
-    // But we can outline coastlines
+    // Draw river paths over the biome fill so generated rivers are visible.
+    if (showBiomes && azRivers.length > 0) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(58, 143, 210, 0.95)";
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        for (const path of azRivers) {
+            if (path.length < 2) continue;
+            ctx.beginPath();
+            ctx.moveTo(azCells[path[0]].x, azCells[path[0]].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(azCells[path[i]].x, azCells[path[i]].y);
+            }
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // Subtle coastline/border tone; cell borders already carry the main structure.
     ctx.strokeStyle = "rgba(0,0,0,0.3)";
     ctx.lineWidth = 1;
-    // Coastline logic omitted for speed, relies on cell borders
 }
 
 // Initial Gen for Tab 1
