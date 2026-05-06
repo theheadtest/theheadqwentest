@@ -741,21 +741,33 @@ function runAzgaar() {
         const newPoints = [];
         for(let i=0; i<numPoints; i++) {
             const cell = azVoronoi.cellPolygon(i);
-            if(!cell) { newPoints.push(azPoints[i]); continue; }
-            let cx=0, cy=0, area=0;
-            // Centroid calculation
-            for(let j=0; j<cell[0].length-1; j++) {
-                const p1 = cell[0][j];
-                const p2 = cell[0][j+1];
-                const cross = p1[0]*p2[1] - p2[0]*p1[1];
+            if(!cell || cell.length < 3) {
+                newPoints.push(azPoints[i]);
+                continue;
+            }
+            
+            let cx = 0, cy = 0, area = 0;
+            
+            for (let j = 0; j < cell.length - 1; j++) {
+                const p1 = cell[j];
+                const p2 = cell[j + 1];
+            
+                const cross = p1[0] * p2[1] - p2[0] * p1[1];
                 cx += (p1[0] + p2[0]) * cross;
                 cy += (p1[1] + p2[1]) * cross;
                 area += cross;
             }
+            
             area /= 2;
-            if(Math.abs(area) < 0.001) { newPoints.push(azPoints[i]); continue; }
-            cx /= (6*area);
-            cy /= (6*area);
+            
+            if (Math.abs(area) < 1e-6) {
+                newPoints.push(azPoints[i]);
+                continue;
+            }
+            
+            cx /= (6 * area);
+            cy /= (6 * area);
+
             newPoints.push([cx, cy]);
         }
         azPoints = newPoints;
@@ -808,6 +820,12 @@ function runAzgaar() {
         if(azCells[i].elevation > elevMax) elevMax = azCells[i].elevation;
     }
     console.log(`[AZGAAR] Height map generated. Elevation range: ${elevMin.toFixed(3)} - ${elevMax.toFixed(3)}`);
+    // Normalize elevation
+    const range = elevMax - elevMin || 1;
+    for (let i = 0; i < numPoints; i++) {
+        azCells[i].elevation =
+            (azCells[i].elevation - elevMin) / range;
+    }
     
     // 5. Moisture Map (Precipitation)
     // Reset moisture
@@ -820,9 +838,8 @@ function runAzgaar() {
         const dx = (azPoints[i][0] - centerX) / (minDim/2);
         const dy = (azPoints[i][1] - centerY) / (minDim/2);
         const dot = dx*wx + dy*wy; // -1 (leeward) to 1 (windward)
-        if(dot > 0) {
-            azCells[i].moisture = dot * azCells[i].elevation; // More rain on high ground windward
-        }
+        const baseMoisture = Math.max(0, dot);
+        azCells[i].moisture = baseMoisture * (0.5 + azCells[i].elevation * 0.5);
     }
     
     // Diffuse moisture slightly
@@ -946,13 +963,15 @@ function drawAzgaar() {
     // Draw Cells
     for(let i=0; i<azCells.length; i++) {
         const cell = azVoronoi.cellPolygon(i);
-        if(!cell) continue;
+        if (!cell || cell.length < 3) continue;
         
         ctx.beginPath();
-        ctx.moveTo(cell[0][0][0], cell[0][0][1]);
-        for(let j=1; j<cell[0].length; j++) {
-            ctx.lineTo(cell[0][j][0], cell[0][j][1]);
+        ctx.moveTo(cell[0][0], cell[0][1]);
+        
+        for (let j = 1; j < cell.length; j++) {
+            ctx.lineTo(cell[j][0], cell[j][1]);
         }
+        
         ctx.closePath();
         
         const cellData = azCells[i]; // Get the actual cell data with biome/elevation
