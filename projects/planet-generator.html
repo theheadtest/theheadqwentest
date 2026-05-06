@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural Tiny Planets - Idea Lab</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        :root {
+            --bg-a: #09111f;
+            --bg-b: #111936;
+            --panel: rgba(15, 23, 42, 0.88);
+            --panel-strong: rgba(15, 23, 42, 0.96);
+            --line: rgba(148, 163, 184, 0.24);
+            --text: #e5edf8;
+            --muted: #9aa8bd;
+            --accent: #7dd3fc;
+            --accent-2: #c084fc;
+            --danger: #fb7185;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(125, 211, 252, 0.12), transparent 28%),
+                radial-gradient(circle at 80% 10%, rgba(192, 132, 252, 0.14), transparent 30%),
+                linear-gradient(135deg, var(--bg-a) 0%, var(--bg-b) 100%);
+        }
+
+        .page {
+            width: min(1280px, 100%);
+            margin: 0 auto;
+            padding: 28px 20px 40px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: end;
+            margin-bottom: 22px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: clamp(2rem, 5vw, 4rem);
+            line-height: 0.95;
+            letter-spacing: -0.05em;
+        }
+
+        .subtitle {
+            max-width: 860px;
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.65;
+            font-size: 1rem;
+        }
+
+        .badge {
+            border: 1px solid rgba(125, 211, 252, 0.35);
+            border-radius: 999px;
+            color: var(--accent);
+            background: rgba(14, 165, 233, 0.08);
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 340px minmax(0, 1fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            box-shadow: 0 22px 80px rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(18px);
+        }
+
+        .controls {
+            padding: 20px;
+            position: sticky;
+            top: 16px;
+        }
+
+        .control-block + .control-block {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid var(--line);
+        }
+
+        h2, h3 {
+            margin: 0 0 14px;
+            letter-spacing: -0.025em;
+        }
+
+        h2 { font-size: 1.15rem; }
+        h3 { font-size: 0.95rem; color: #dbeafe; }
+
+        label {
+            display: block;
+            margin: 12px 0 7px;
+            color: #cbd5e1;
+            font-size: 0.82rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        input, select, button {
+            width: 100%;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 12px;
+            font: inherit;
+        }
+
+        input, select {
+            color: var(--text);
+            background: rgba(2, 6, 23, 0.58);
+            padding: 11px 12px;
+            outline: none;
+        }
+
+        input[type="range"] { padding: 0; accent-color: var(--accent); }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .value-row {
+            display: flex;
+            justify-content: space-between;
+            color: var(--muted);
+            font-size: 0.82rem;
+            margin-top: 6px;
+        }
+
+        button {
+            cursor: pointer;
+            color: #04111f;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border: 0;
+            padding: 12px 14px;
+            font-weight: 900;
+            transition: transform 0.15s ease, filter 0.15s ease;
+        }
+
+        button:hover { transform: translateY(-1px); filter: brightness(1.08); }
+        button:active { transform: translateY(0); }
+
+        button.secondary {
+            color: var(--text);
+            background: rgba(30, 41, 59, 0.92);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+        }
+
+        .toggles {
+            display: grid;
+            gap: 8px;
+        }
+
+        .checkline {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #cbd5e1;
+            font-size: 0.92rem;
+        }
+
+        .checkline input {
+            width: auto;
+            accent-color: var(--accent);
+        }
+
+        .stage {
+            min-height: 720px;
+            overflow: hidden;
+        }
+
+        .canvas-wrap {
+            position: relative;
+            min-height: 620px;
+            display: grid;
+            place-items: center;
+            padding: 28px;
+            border-radius: 20px 20px 0 0;
+            background:
+                radial-gradient(circle at center, rgba(30, 64, 175, 0.18), transparent 38%),
+                radial-gradient(circle at 50% 110%, rgba(125, 211, 252, 0.12), transparent 35%),
+                #020617;
+        }
+
+        canvas {
+            width: min(100%, 720px);
+            aspect-ratio: 1 / 1;
+            border-radius: 18px;
+            image-rendering: auto;
+        }
+
+        .planet-shadow {
+            position: absolute;
+            width: 44%;
+            height: 7%;
+            bottom: 72px;
+            border-radius: 50%;
+            background: radial-gradient(ellipse, rgba(0, 0, 0, 0.45), transparent 70%);
+            filter: blur(10px);
+            pointer-events: none;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1px;
+            background: var(--line);
+            border-top: 1px solid var(--line);
+        }
+
+        .metric {
+            background: var(--panel-strong);
+            padding: 16px;
+        }
+
+        .metric span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 900;
+        }
+
+        .metric strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 1rem;
+        }
+
+        .description {
+            padding: 20px;
+            color: #b8c4d8;
+            line-height: 1.65;
+        }
+
+        .description strong { color: #f8fafc; }
+
+        .log-panel {
+            margin-top: 22px;
+            padding: 18px;
+        }
+
+        .log-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .log-header h2 { margin: 0; }
+
+        .log {
+            height: 170px;
+            overflow: auto;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(2, 6, 23, 0.72);
+            padding: 12px;
+            color: #b7f7d2;
+            font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            white-space: pre-wrap;
+        }
+
+        .pill-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .pill {
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 999px;
+            padding: 6px 9px;
+            color: #cbd5e1;
+            background: rgba(15, 23, 42, 0.7);
+            font-size: 0.76rem;
+        }
+
+        @media (max-width: 980px) {
+            header { grid-template-columns: 1fr; }
+            .layout { grid-template-columns: 1fr; }
+            .controls { position: static; }
+            .stage { min-height: auto; }
+            .info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 560px) {
+            .page { padding: 20px 12px 28px; }
+            .canvas-wrap { min-height: 430px; padding: 12px; }
+            .row { grid-template-columns: 1fr; }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <a href="../index.html" class="back-link">← Back to Idea Lab</a>
+
+        <header>
+            <div>
+                <h1>🪐 Procedural Tiny Planets</h1>
+                <p class="subtitle">
+                    Canvas 2D impostor spheres rendered with per-pixel sphere projection, seeded 3D noise,
+                    animated longitude rotation, procedural lighting, atmosphere, clouds, bands, cracks, and craters.
+                </p>
+            </div>
+            <div class="badge">No WebGL · Procedural · Seeded</div>
+        </header>
+
+        <section class="layout">
+            <aside class="panel controls">
+                <div class="control-block">
+                    <h2>Generator</h2>
+                    <label for="seed">Seed</label>
+                    <input id="seed" type="text" value="tiny-world-42" spellcheck="false">
+
+                    <label for="planet-type">Planet Type</label>
+                    <select id="planet-type"></select>
+
+                    <div class="row">
+                        <button id="regenerate">Regenerate</button>
+                        <button id="randomize" class="secondary">Random Seed</button>
+                    </div>
+                </div>
+
+                <div class="control-block">
+                    <h2>Display</h2>
+                    <label for="render-size">Render Detail</label>
+                    <select id="render-size">
+                        <option value="240">Fast · 240px</option>
+                        <option value="320" selected>Balanced · 320px</option>
+                        <option value="420">High · 420px</option>
+                        <option value="520">Ultra · 520px</option>
+                    </select>
+
+                    <label for="rotation-speed">Rotation Speed</label>
+                    <input id="rotation-speed" type="range" min="0" max="2" step="0.05" value="0.65">
+                    <div class="value-row"><span>still</span><strong id="rotation-speed-value">0.65×</strong><span>fast</span></div>
+
+                    <label for="relief-strength">Relief Strength</label>
+                    <input id="relief-strength" type="range" min="0" max="2" step="0.05" value="1">
+                    <div class="value-row"><span>soft</span><strong id="relief-strength-value">1.00×</strong><span>bold</span></div>
+                </div>
+
+                <div class="control-block">
+                    <h2>Layers</h2>
+                    <div class="toggles">
+                        <label class="checkline"><input id="clouds-toggle" type="checkbox" checked> Clouds / atmospheric motion</label>
+                        <label class="checkline"><input id="stars-toggle" type="checkbox" checked> Star field</label>
+                        <label class="checkline"><input id="logs-toggle" type="checkbox" checked> Verbose logs</label>
+                    </div>
+                </div>
+
+                <div class="control-block">
+                    <h2>How it works</h2>
+                    <p class="subtitle" style="font-size:0.9rem; margin:0;">
+                        Every visible pixel is treated as a point on a sphere. We rotate that 3D point, sample
+                        seeded procedural noise from it, color the resulting material, then apply fake sun lighting.
+                    </p>
+                    <div class="pill-list">
+                        <span class="pill">3D fBm noise</span>
+                        <span class="pill">Domain warp</span>
+                        <span class="pill">Ridged terrain</span>
+                        <span class="pill">Voronoi cracks</span>
+                        <span class="pill">Crater fields</span>
+                    </div>
+                </div>
+            </aside>
+
+            <section>
+                <div class="panel stage">
+                    <div class="canvas-wrap">
+                        <canvas id="planet-canvas" width="720" height="720" aria-label="Animated generated planet"></canvas>
+                        <div class="planet-shadow"></div>
+                    </div>
+                    <div class="info-grid">
+                        <div class="metric"><span>Type</span><strong id="metric-type">—</strong></div>
+                        <div class="metric"><span>Seed</span><strong id="metric-seed">—</strong></div>
+                        <div class="metric"><span>Frame Cost</span><strong id="metric-frame">—</strong></div>
+                        <div class="metric"><span>Renderer</span><strong id="metric-renderer">Canvas 2D</strong></div>
+                    </div>
+                    <div class="description" id="planet-description"></div>
+                </div>
+
+                <div class="panel log-panel">
+                    <div class="log-header">
+                        <h2>Diagnostics</h2>
+                        <button id="clear-log" class="secondary" style="width:auto; padding:8px 11px;">Clear</button>
+                    </div>
+                    <div id="log" class="log"></div>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <script>
+        'use strict';
+
+        const TAU = Math.PI * 2;
+        const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
+        const smoothstep = (edge0, edge1, x) => {
+            const t = clamp((x - edge0) / (edge1 - edge0));
+            return t * t * (3 - 2 * t);
+        };
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const mixColor = (a, b, t) => [
+            Math.round(lerp(a[0], b[0], t)),
+            Math.round(lerp(a[1], b[1], t)),
+            Math.round(lerp(a[2], b[2], t))
+        ];
+        const addColor = (a, b, t) => [
+            Math.round(clamp(a[0] + b[0] * t, 0, 255)),
+            Math.round(clamp(a[1] + b[1] * t, 0, 255)),
+            Math.round(clamp(a[2] + b[2] * t, 0, 255))
+        ];
+        const scaleColor = (color, amount) => [
+            Math.round(clamp(color[0] * amount, 0, 255)),
+            Math.round(clamp(color[1] * amount, 0, 255)),
+            Math.round(clamp(color[2] * amount, 0, 255))
+        ];
+        const normalize = (x, y, z) => {
+            const len = Math.hypot(x, y, z) || 1;
+            return [x / len, y / len, z / len];
+        };
+
+        class RNG {
+            constructor(seed) {
+                this.state = RNG.hash(seed || 'default-seed');
+            }
+
+            static hash(text) {
+                let h = 2166136261 >>> 0;
+                for (let i = 0; i < text.length; i++) {
+                    h ^= text.charCodeAt(i);
+                    h = Math.imul(h, 16777619);
+                }
+                return h >>> 0;
+            }
+
+            next() {
+                let t = this.state += 0x6D2B79F5;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            }
+
+            range(min, max) { return lerp(min, max, this.next()); }
+            int(min, max) { return Math.floor(this.range(min, max + 1)); }
+            pick(items) { return items[Math.floor(this.next() * items.length)]; }
+        }
+
+        class Perlin3D {
+            constructor(seed) {
+                const rng = new RNG(`perlin:${seed}`);
+                const perm = Array.from({ length: 256 }, (_, i) => i);
+                for (let i = perm.length - 1; i > 0; i--) {
+                    const j = Math.floor(rng.next() * (i + 1));
+                    [perm[i], perm[j]] = [perm[j], perm[i]];
+                }
+                this.p = new Uint8Array(512);
+                for (let i = 0; i < 512; i++) this.p[i] = perm[i & 255];
+            }
+
+            fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+            grad(hash, x, y, z) {
+                const h = hash & 15;
+                const u = h < 8 ? x : y;
+                const v = h < 4 ? y : h === 12 || h === 14 ? x : z;
+                return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+            }
+
+            noise(x, y, z) {
+                const X = Math.floor(x) & 255;
+                const Y = Math.floor(y) & 255;
+                const Z = Math.floor(z) & 255;
+                x -= Math.floor(x);
+                y -= Math.floor(y);
+                z -= Math.floor(z);
+                const u = this.fade(x), v = this.fade(y), w = this.fade(z);
+                const A = this.p[X] + Y, AA = this.p[A] + Z, AB = this.p[A + 1] + Z;
+                const B = this.p[X + 1] + Y, BA = this.p[B] + Z, BB = this.p[B + 1] + Z;
+
+                return lerp(
+                    lerp(
+                        lerp(this.grad(this.p[AA], x, y, z), this.grad(this.p[BA], x - 1, y, z), u),
+                        lerp(this.grad(this.p[AB], x, y - 1, z), this.grad(this.p[BB], x - 1, y - 1, z), u),
+                        v
+                    ),
+                    lerp(
+                        lerp(this.grad(this.p[AA + 1], x, y, z - 1), this.grad(this.p[BA + 1], x - 1, y, z - 1), u),
+                        lerp(this.grad(this.p[AB + 1], x, y - 1, z - 1), this.grad(this.p[BB + 1], x - 1, y - 1, z - 1), u),
+                        v
+                    ),
+                    w
+                );
+            }
+
+            fbm(x, y, z, octaves = 5, lacunarity = 2, gain = 0.5) {
+                let sum = 0;
+                let amp = 0.5;
+                let freq = 1;
+                let max = 0;
+                for (let i = 0; i < octaves; i++) {
+                    sum += this.noise(x * freq, y * freq, z * freq) * amp;
+                    max += amp;
+                    amp *= gain;
+                    freq *= lacunarity;
+                }
+                return sum / max;
+            }
+
+            fbm01(x, y, z, octaves = 5, lacunarity = 2, gain = 0.5) {
+                return this.fbm(x, y, z, octaves, lacunarity, gain) * 0.5 + 0.5;
+            }
+
+            ridged(x, y, z, octaves = 5, lacunarity = 2, gain = 0.5) {
+                let sum = 0;
+                let amp = 0.55;
+                let freq = 1;
+                let max = 0;
+                for (let i = 0; i < octaves; i++) {
+                    const n = 1 - Math.abs(this.noise(x * freq, y * freq, z * freq));
+                    sum += n * n * amp;
+                    max += amp;
+                    amp *= gain;
+                    freq *= lacunarity;
+                }
+                return sum / max;
+            }
+        }
+
+        const PLANET_TYPES = {
+            earthlike: {
+                name: 'Earthlike', icon: '🌍', atmosphere: [93, 190, 255], clouds: true, water: true,
+                description: 'Layered 3D fBm creates continents, ridged noise raises mountain belts, and latitude adds polar ice. Oceans get a subtle specular highlight under the fake sun.',
+                shade: 'natural', generator: materialEarthlike
+            },
+            archipelago: {
+                name: 'Archipelago', icon: '🏝️', atmosphere: [105, 211, 255], clouds: true, water: true,
+                description: 'High water level plus noisy continent masks produce scattered island chains, turquoise shallows, reefs, and bright tropical clouds.',
+                shade: 'natural', generator: materialArchipelago
+            },
+            ocean: {
+                name: 'Ocean World', icon: '🌊', atmosphere: [80, 180, 255], clouds: true, water: true,
+                description: 'Almost all water: deep blue currents, rare volcanic islands, bright shallow shelves, and sweeping cloud systems.',
+                shade: 'natural', generator: materialOcean
+            },
+            desert: {
+                name: 'Desert', icon: '🏜️', atmosphere: [255, 184, 92], clouds: false, water: false,
+                description: 'Low-contrast terrain, latitude-biased dune bands, and oxidized highlands make a dry ochre world with soft dusty lighting.',
+                shade: 'warm', generator: materialDesert
+            },
+            ice: {
+                name: 'Ice World', icon: '❄️', atmosphere: [165, 220, 255], clouds: true, water: false,
+                description: 'Pale 3D noise is cut by procedural fracture lines, blue crevasses, and frosted ridges for a frozen moon-like planet.',
+                shade: 'cool', generator: materialIce
+            },
+            lava: {
+                name: 'Lava', icon: '🌋', atmosphere: [255, 95, 48], clouds: false, water: false,
+                description: 'Voronoi-style crack fields and ridged noise reveal glowing magma seams under dark basalt plates. Cracks remain emissive on the night side.',
+                shade: 'hot', generator: materialLava
+            },
+            moon: {
+                name: 'Cratered Moon', icon: '🌕', atmosphere: [190, 190, 205], clouds: false, water: false,
+                description: 'A crater list is generated from the seed, then stamped into a gray regolith material with rims, basins, and subtle highland noise.',
+                shade: 'airless', generator: materialMoon
+            },
+            gasGiant: {
+                name: 'Gas Giant', icon: '🟤', atmosphere: [255, 215, 155], clouds: false, water: false,
+                description: 'Latitude bands drift with turbulent 3D noise. A few seeded oval storms are blended into the cloud-top texture.',
+                shade: 'soft', generator: materialGasGiant
+            },
+            neptune: {
+                name: 'Ice Giant', icon: '🔵', atmosphere: [83, 180, 255], clouds: false, water: false,
+                description: 'Blue methane-like bands, subtle storms, and smooth high-altitude haze create a calm outer-system ice giant.',
+                shade: 'soft', generator: materialNeptune
+            },
+            toxic: {
+                name: 'Toxic Swamp', icon: '🧪', atmosphere: [150, 255, 93], clouds: true, water: true,
+                description: 'Acid seas, sulfur plains, dense green clouds, and noisy wetland continents create an unhealthy alien biosphere.',
+                shade: 'toxic', generator: materialToxic
+            },
+            forest: {
+                name: 'Forest World', icon: '🌲', atmosphere: [100, 240, 180], clouds: true, water: true,
+                description: 'A wetter Earthlike variant with broad forest biomes, darker mountain ranges, inland lakes, and soft cloud cover.',
+                shade: 'natural', generator: materialForest
+            },
+            candy: {
+                name: 'Alien Pastel', icon: '🍬', atmosphere: [238, 181, 255], clouds: true, water: false,
+                description: 'A deliberately alien palette: pastel plateaus, lavender basins, cyan ridges, and shimmering high-altitude cloud wisps.',
+                shade: 'pastel', generator: materialCandy
+            }
+        };
+
+        const state = {
+            seed: 'tiny-world-42',
+            typeKey: 'earthlike',
+            renderSize: 320,
+            rotationSpeed: 0.65,
+            reliefStrength: 1,
+            showClouds: true,
+            showStars: true,
+            verboseLogs: true,
+            rotation: 0,
+            lastTime: 0,
+            noise: null,
+            rng: null,
+            craters: [],
+            storms: [],
+            stars: [],
+            texture: null,
+            cloudTexture: null,
+            frameSamples: [],
+            frameCount: 0
+        };
+
+        const canvas = document.getElementById('planet-canvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const logEl = document.getElementById('log');
+        const typeSelect = document.getElementById('planet-type');
+        const seedInput = document.getElementById('seed');
+        const renderSizeSelect = document.getElementById('render-size');
+        const speedInput = document.getElementById('rotation-speed');
+        const reliefInput = document.getElementById('relief-strength');
+        const cloudsToggle = document.getElementById('clouds-toggle');
+        const starsToggle = document.getElementById('stars-toggle');
+        const logsToggle = document.getElementById('logs-toggle');
+
+        function log(message, data = null, level = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const payload = data ? ` ${JSON.stringify(data)}` : '';
+            const line = `[${time}] [${level.toUpperCase()}] ${message}${payload}`;
+            if (level === 'error') console.error(line, data || '');
+            else if (level === 'warn') console.warn(line, data || '');
+            else console.log(line, data || '');
+
+            if (!state.verboseLogs && level === 'info') return;
+            logEl.textContent += `${line}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function initControls() {
+            for (const [key, type] of Object.entries(PLANET_TYPES)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = `${type.icon} ${type.name}`;
+                typeSelect.appendChild(option);
+            }
+
+            typeSelect.value = state.typeKey;
+            seedInput.value = state.seed;
+            renderSizeSelect.value = String(state.renderSize);
+            speedInput.value = String(state.rotationSpeed);
+            reliefInput.value = String(state.reliefStrength);
+
+            document.getElementById('regenerate').addEventListener('click', regenerate);
+            document.getElementById('randomize').addEventListener('click', () => {
+                seedInput.value = randomSeed();
+                regenerate();
+            });
+            document.getElementById('clear-log').addEventListener('click', () => { logEl.textContent = ''; });
+
+            seedInput.addEventListener('change', regenerate);
+            typeSelect.addEventListener('change', regenerate);
+            renderSizeSelect.addEventListener('change', regenerate);
+            speedInput.addEventListener('input', syncLiveControls);
+            reliefInput.addEventListener('input', syncLiveControls);
+            cloudsToggle.addEventListener('change', syncLiveControls);
+            starsToggle.addEventListener('change', syncLiveControls);
+            logsToggle.addEventListener('change', syncLiveControls);
+
+            syncLiveControls();
+            log('Controls initialized', { planetTypes: Object.keys(PLANET_TYPES).length });
+        }
+
+        function syncLiveControls() {
+            state.rotationSpeed = parseFloat(speedInput.value);
+            state.reliefStrength = parseFloat(reliefInput.value);
+            state.showClouds = cloudsToggle.checked;
+            state.showStars = starsToggle.checked;
+            state.verboseLogs = logsToggle.checked;
+            document.getElementById('rotation-speed-value').textContent = `${state.rotationSpeed.toFixed(2)}×`;
+            document.getElementById('relief-strength-value').textContent = `${state.reliefStrength.toFixed(2)}×`;
+        }
+
+        function randomSeed() {
+            const adjectives = ['silent', 'amber', 'violet', 'hidden', 'ancient', 'tiny', 'bright', 'frozen', 'ember', 'velvet'];
+            const nouns = ['orbit', 'harbor', 'planet', 'moon', 'reef', 'storm', 'garden', 'forge', 'ocean', 'citadel'];
+            const rng = new RNG(`${Date.now()}-${Math.random()}`);
+            return `${rng.pick(adjectives)}-${rng.pick(nouns)}-${rng.int(100, 9999)}`;
+        }
+
+        function regenerate() {
+            const started = performance.now();
+            state.seed = seedInput.value.trim() || 'tiny-world-42';
+            state.typeKey = typeSelect.value;
+            state.renderSize = parseInt(renderSizeSelect.value, 10);
+            state.rotation = 0;
+            state.lastTime = 0;
+            state.frameSamples = [];
+            state.frameCount = 0;
+            state.rng = new RNG(`planet:${state.seed}:${state.typeKey}`);
+            state.noise = new Perlin3D(`${state.seed}:${state.typeKey}`);
+            state.craters = createCraters(state.rng, 92);
+            state.storms = createStorms(state.rng, 8);
+            state.stars = createStars(new RNG(`stars:${state.seed}`), 280);
+            state.texture = buildPlanetTexture();
+            state.cloudTexture = buildCloudTexture();
+            syncLiveControls();
+            updateMetrics();
+            log('Regenerated planet state', {
+                seed: state.seed,
+                type: state.typeKey,
+                renderSize: state.renderSize,
+                craters: state.craters.length,
+                storms: state.storms.length,
+                texture: `${state.texture.width}x${state.texture.height}`,
+                durationMs: +(performance.now() - started).toFixed(2)
+            });
+        }
+
+        function createCraters(rng, count) {
+            return Array.from({ length: count }, (_, i) => ({
+                x: rng.range(-1, 1), y: rng.range(-0.9, 0.9), z: rng.range(-1, 1),
+                radius: rng.range(0.025, i < 12 ? 0.13 : 0.075),
+                depth: rng.range(0.35, 1.0)
+            })).map(c => {
+                const n = normalize(c.x, c.y, c.z);
+                return { ...c, x: n[0], y: n[1], z: n[2] };
+            });
+        }
+
+        function createStorms(rng, count) {
+            return Array.from({ length: count }, (_, i) => ({
+                lon: rng.range(-Math.PI, Math.PI),
+                lat: rng.range(-0.72, 0.72),
+                rx: rng.range(0.10, i === 0 ? 0.32 : 0.2),
+                ry: rng.range(0.035, i === 0 ? 0.12 : 0.08),
+                strength: rng.range(0.35, 1),
+                tint: rng.next()
+            }));
+        }
+
+        function createStars(rng, count) {
+            return Array.from({ length: count }, () => ({
+                x: rng.next() * canvas.width,
+                y: rng.next() * canvas.height,
+                r: rng.range(0.35, 1.45),
+                a: rng.range(0.2, 0.95),
+                twinkle: rng.range(0.5, 1.8)
+            }));
+        }
+
+        function buildPlanetTexture() {
+            const started = performance.now();
+            const width = Math.max(384, Math.min(768, Math.round(state.renderSize * 1.6)));
+            const height = Math.floor(width / 2);
+            const type = PLANET_TYPES[state.typeKey];
+            const colors = new Uint8ClampedArray(width * height * 3);
+            const flags = new Uint8Array(width * height);
+            const emissive = new Float32Array(width * height);
+
+            for (let y = 0; y < height; y++) {
+                const v = (y + 0.5) / height;
+                const lat = Math.PI * (0.5 - v);
+                const cosLat = Math.cos(lat);
+                const sy = Math.sin(lat);
+                for (let x = 0; x < width; x++) {
+                    const u = (x + 0.5) / width;
+                    const lon = u * TAU - Math.PI;
+                    const sx = Math.sin(lon) * cosLat;
+                    const sz = Math.cos(lon) * cosLat;
+                    const material = type.generator(sx, sy, sz, lat, lon);
+                    const idx = y * width + x;
+                    const cidx = idx * 3;
+                    colors[cidx] = material.color[0];
+                    colors[cidx + 1] = material.color[1];
+                    colors[cidx + 2] = material.color[2];
+                    flags[idx] = material.water ? 1 : 0;
+                    emissive[idx] = material.emissive || 0;
+                }
+            }
+
+            log('Built procedural planet texture', {
+                width,
+                height,
+                pixels: width * height,
+                durationMs: +(performance.now() - started).toFixed(2)
+            });
+            return { width, height, colors, flags, emissive };
+        }
+
+        function buildCloudTexture() {
+            const started = performance.now();
+            const width = state.texture.width;
+            const height = state.texture.height;
+            const mask = new Uint8ClampedArray(width * height);
+            const type = PLANET_TYPES[state.typeKey];
+            if (!type.clouds) {
+                log('Skipped cloud texture for cloudless planet type', { type: state.typeKey });
+                return { width, height, mask };
+            }
+
+            const density = state.typeKey === 'toxic' ? 0.49 : 0.58;
+            for (let y = 0; y < height; y++) {
+                const v = (y + 0.5) / height;
+                const lat = Math.PI * (0.5 - v);
+                const cosLat = Math.cos(lat);
+                const sy = Math.sin(lat);
+                for (let x = 0; x < width; x++) {
+                    const u = (x + 0.5) / width;
+                    const lon = u * TAU - Math.PI;
+                    const sx = Math.sin(lon) * cosLat;
+                    const sz = Math.cos(lon) * cosLat;
+                    mask[y * width + x] = Math.round(cloudMask(sx, sy, sz, 0, density) * 255);
+                }
+            }
+
+            log('Built procedural cloud texture', {
+                width,
+                height,
+                pixels: width * height,
+                durationMs: +(performance.now() - started).toFixed(2)
+            });
+            return { width, height, mask };
+        }
+
+        function sampleTexture(texture, u, v) {
+            u = ((u % 1) + 1) % 1;
+            v = clamp(v, 0, 0.999999);
+            const x = Math.floor(u * texture.width) % texture.width;
+            const y = Math.floor(v * texture.height);
+            const idx = y * texture.width + x;
+            const cidx = idx * 3;
+            return {
+                color: [texture.colors[cidx], texture.colors[cidx + 1], texture.colors[cidx + 2]],
+                water: texture.flags[idx] === 1,
+                emissive: texture.emissive[idx]
+            };
+        }
+
+        function sampleCloudTexture(texture, u, v) {
+            u = ((u % 1) + 1) % 1;
+            v = clamp(v, 0, 0.999999);
+            const x = Math.floor(u * texture.width) % texture.width;
+            const y = Math.floor(v * texture.height);
+            return texture.mask[y * texture.width + x] / 255;
+        }
+
+        function sampleBase(x, y, z, scale = 1, warp = 0.18) {
+            const n = state.noise;
+            const wx = n.fbm(x * 1.7 + 13.2, y * 1.7 - 4.1, z * 1.7 + 7.7, 3) * warp;
+            const wy = n.fbm(x * 1.7 - 8.5, y * 1.7 + 11.4, z * 1.7 - 2.3, 3) * warp;
+            const wz = n.fbm(x * 1.7 + 3.1, y * 1.7 + 5.9, z * 1.7 + 19.6, 3) * warp;
+            return n.fbm01((x + wx) * scale, (y + wy) * scale, (z + wz) * scale, 6, 2.05, 0.5);
+        }
+
+        function sampleTerrain(x, y, z, options = {}) {
+            const scale = options.scale || 2.2;
+            const warp = options.warp ?? 0.2;
+            const continents = sampleBase(x, y, z, scale, warp);
+            const detail = state.noise.fbm01(x * scale * 4.7 + 20, y * scale * 4.7, z * scale * 4.7 - 10, 5, 2.2, 0.48);
+            const ridges = state.noise.ridged(x * scale * 3.1 - 5, y * scale * 3.1 + 2, z * scale * 3.1, 5, 2.15, 0.52);
+            const height = clamp((continents * 0.72 + detail * 0.18 + ridges * 0.1 - 0.04) * state.reliefStrength + (1 - state.reliefStrength) * 0.5);
+            return { height, continents, detail, ridges };
+        }
+
+        function cloudMask(x, y, z, rotation, density = 0.56) {
+            const c = Math.cos(rotation * 1.35), s = Math.sin(rotation * 1.35);
+            const rx = x * c + z * s;
+            const rz = -x * s + z * c;
+            const broad = state.noise.fbm01(rx * 3.2 + 100, y * 3.2 - 15, rz * 3.2, 5, 2.0, 0.56);
+            const wisps = state.noise.ridged(rx * 9.5 - 30, y * 9.5 + 20, rz * 9.5, 4, 2.1, 0.47);
+            return smoothstep(density, 0.94, broad * 0.72 + wisps * 0.28);
+        }
+
+        function crackMask(x, y, z, scale = 7) {
+            const a = Math.abs(state.noise.noise(x * scale + 4.8, y * scale - 2.1, z * scale + 9.7));
+            const b = Math.abs(state.noise.noise(x * scale * 1.7 - 18, y * scale * 1.7, z * scale * 1.7 + 6));
+            return 1 - smoothstep(0.045, 0.18, Math.min(a, b * 0.85));
+        }
+
+        function craterEffect(x, y, z) {
+            let depression = 0;
+            let rim = 0;
+            for (const c of state.craters) {
+                const dot = x * c.x + y * c.y + z * c.z;
+                if (dot < 0.72) continue;
+                const dist = Math.acos(clamp(dot, -1, 1));
+                if (dist > c.radius * 1.8) continue;
+                const normalized = dist / c.radius;
+                depression += (1 - smoothstep(0.1, 1.0, normalized)) * c.depth;
+                rim += (1 - Math.abs(normalized - 1)) > 0 ? smoothstep(0.62, 1.0, normalized) * (1 - smoothstep(1.0, 1.55, normalized)) * c.depth : 0;
+            }
+            return { depression: clamp(depression), rim: clamp(rim) };
+        }
+
+        function materialEarthlike(x, y, z, lat) {
+            const t = sampleTerrain(x, y, z, { scale: 2.15, warp: 0.24 });
+            const polar = smoothstep(0.58, 0.94, Math.abs(lat));
+            const moisture = state.noise.fbm01(x * 3.4 - 12, y * 3.4 + 9, z * 3.4, 4);
+            const waterLevel = 0.51;
+            let color;
+            let water = t.height < waterLevel;
+            if (water) {
+                const shallow = smoothstep(waterLevel - 0.13, waterLevel, t.height);
+                color = mixColor([8, 29, 88], [44, 150, 190], shallow);
+            } else if (t.height < waterLevel + 0.035) color = [215, 199, 139];
+            else if (t.height < 0.64) color = mixColor([72, 146, 62], [35, 104, 50], moisture);
+            else if (t.height < 0.79) color = mixColor([99, 116, 76], [118, 104, 84], t.ridges);
+            else color = mixColor([120, 118, 112], [240, 245, 248], smoothstep(0.79, 0.96, t.height));
+            if (polar > 0.05 && t.height > waterLevel - 0.08) color = mixColor(color, [240, 248, 255], polar * 0.9);
+            return { color, height: t.height, water, emissive: 0 };
+        }
+
+        function materialArchipelago(x, y, z, lat) {
+            const t = sampleTerrain(x, y, z, { scale: 3.0, warp: 0.32 });
+            const h = t.height * 0.94 + t.ridges * 0.08;
+            const waterLevel = 0.60;
+            if (h < waterLevel) {
+                const shallow = smoothstep(waterLevel - 0.08, waterLevel, h);
+                return { color: mixColor([7, 42, 112], [64, 207, 206], shallow), height: h, water: true, emissive: 0 };
+            }
+            if (h < waterLevel + 0.035) return { color: [238, 217, 151], height: h, water: false, emissive: 0 };
+            const lush = state.noise.fbm01(x * 6, y * 6, z * 6, 4);
+            return { color: mixColor([73, 166, 74], [25, 120, 64], lush), height: h, water: false, emissive: 0 };
+        }
+
+        function materialOcean(x, y, z) {
+            const t = sampleTerrain(x, y, z, { scale: 2.7, warp: 0.25 });
+            const islands = t.height > 0.77;
+            if (!islands) {
+                const currents = state.noise.ridged(x * 5 + 12, y * 5, z * 5 - 8, 4);
+                return { color: mixColor([4, 38, 105], [26, 120, 190], currents * 0.55 + t.height * 0.25), height: t.height, water: true, emissive: 0 };
+            }
+            return { color: t.height > 0.88 ? [210, 210, 200] : [47, 132, 76], height: t.height, water: false, emissive: 0 };
+        }
+
+        function materialDesert(x, y, z, lat) {
+            const t = sampleTerrain(x, y, z, { scale: 2.45, warp: 0.18 });
+            const bands = Math.sin((lat * 12) + state.noise.fbm(x * 5, y * 5, z * 5, 3) * 2.5) * 0.5 + 0.5;
+            let color = mixColor([181, 117, 54], [231, 184, 105], t.height * 0.7 + bands * 0.3);
+            if (t.ridges > 0.62) color = mixColor(color, [98, 72, 59], smoothstep(0.62, 0.9, t.ridges));
+            return { color, height: t.height, water: false, emissive: 0 };
+        }
+
+        function materialIce(x, y, z) {
+            const t = sampleTerrain(x, y, z, { scale: 2.6, warp: 0.13 });
+            const cracks = crackMask(x, y, z, 8.5);
+            let color = mixColor([171, 216, 232], [245, 250, 255], t.height);
+            if (cracks > 0.02) color = mixColor(color, [36, 116, 178], cracks * 0.75);
+            if (t.ridges > 0.7) color = mixColor(color, [255, 255, 255], smoothstep(0.7, 0.95, t.ridges));
+            return { color, height: t.height, water: false, emissive: 0 };
+        }
+
+        function materialLava(x, y, z) {
+            const t = sampleTerrain(x, y, z, { scale: 2.9, warp: 0.32 });
+            const cracks = crackMask(x, y, z, 6.8);
+            let color = mixColor([24, 20, 19], [94, 47, 33], t.height * 0.75 + t.ridges * 0.25);
+            if (cracks > 0.02) color = mixColor(color, [255, 190, 36], smoothstep(0.05, 0.92, cracks));
+            return { color, height: t.height, water: false, emissive: cracks * 1.35 };
+        }
+
+        function materialMoon(x, y, z) {
+            const base = state.noise.fbm01(x * 4.8, y * 4.8, z * 4.8, 5, 2.1, 0.52);
+            const crater = craterEffect(x, y, z);
+            const height = clamp(base * 0.72 - crater.depression * 0.23 + crater.rim * 0.18 + 0.16);
+            let color = mixColor([78, 79, 84], [188, 185, 174], height);
+            if (crater.depression > 0.04) color = mixColor(color, [48, 49, 55], crater.depression * 0.62);
+            if (crater.rim > 0.04) color = mixColor(color, [220, 218, 202], crater.rim * 0.45);
+            return { color, height, water: false, emissive: 0 };
+        }
+
+        function materialGasGiant(x, y, z, lat, lon) {
+            const turbulent = state.noise.fbm(x * 3.6 + 20, y * 9.5, z * 3.6 - 8, 5) * 0.35;
+            const stripe = Math.sin((lat + turbulent) * 24) * 0.5 + 0.5;
+            let color = mixColor([116, 70, 42], [241, 207, 150], stripe);
+            color = mixColor(color, [255, 246, 220], state.noise.ridged(x * 5, y * 12, z * 5, 4) * 0.35);
+            color = applyStorms(color, lat, lon, [[170, 72, 48], [255, 230, 190]]);
+            return { color, height: 0.55, water: false, emissive: 0 };
+        }
+
+        function materialNeptune(x, y, z, lat, lon) {
+            const bands = Math.sin((lat + state.noise.fbm(x * 2, y * 8, z * 2, 4) * 0.25) * 18) * 0.5 + 0.5;
+            let color = mixColor([16, 65, 165], [82, 190, 244], bands * 0.55 + 0.25);
+            color = mixColor(color, [7, 30, 100], state.noise.ridged(x * 4 - 7, y * 7, z * 4, 4) * 0.28);
+            color = applyStorms(color, lat, lon, [[14, 30, 90], [160, 225, 255]]);
+            return { color, height: 0.5, water: false, emissive: 0 };
+        }
+
+        function materialToxic(x, y, z) {
+            const t = sampleTerrain(x, y, z, { scale: 2.35, warp: 0.28 });
+            const waterLevel = 0.49;
+            if (t.height < waterLevel) {
+                return { color: mixColor([55, 100, 35], [168, 214, 44], t.height), height: t.height, water: true, emissive: 0.04 };
+            }
+            let color = mixColor([87, 96, 30], [168, 148, 54], t.height);
+            if (t.ridges > 0.63) color = mixColor(color, [58, 64, 38], smoothstep(0.63, 0.9, t.ridges));
+            return { color, height: t.height, water: false, emissive: 0 };
+        }
+
+        function materialForest(x, y, z, lat) {
+            const t = sampleTerrain(x, y, z, { scale: 2.5, warp: 0.28 });
+            const waterLevel = 0.45;
+            const cold = smoothstep(0.64, 0.95, Math.abs(lat));
+            if (t.height < waterLevel) {
+                return { color: mixColor([5, 45, 91], [26, 115, 142], t.height / waterLevel), height: t.height, water: true, emissive: 0 };
+            }
+            let color = mixColor([24, 92, 42], [58, 145, 58], state.noise.fbm01(x * 5, y * 5, z * 5, 4));
+            if (t.height > 0.72) color = mixColor(color, [94, 92, 78], smoothstep(0.72, 0.88, t.height));
+            if (cold > 0.05) color = mixColor(color, [225, 238, 230], cold * 0.8);
+            return { color, height: t.height, water: false, emissive: 0 };
+        }
+
+        function materialCandy(x, y, z) {
+            const t = sampleTerrain(x, y, z, { scale: 3.15, warp: 0.34 });
+            const bands = state.noise.ridged(x * 5 + 42, y * 5 - 10, z * 5, 4);
+            let color = mixColor([240, 126, 190], [104, 224, 232], t.height);
+            color = mixColor(color, [209, 184, 255], bands * 0.55);
+            return { color, height: t.height, water: false, emissive: 0.02 };
+        }
+
+        function applyStorms(color, lat, lon, colors) {
+            let result = color;
+            for (const storm of state.storms) {
+                let dLon = Math.abs(lon - storm.lon);
+                dLon = Math.min(dLon, TAU - dLon);
+                const dx = dLon / storm.rx;
+                const dy = (lat - storm.lat) / storm.ry;
+                const d = dx * dx + dy * dy;
+                if (d < 1) {
+                    const swirl = state.noise.fbm01(dx * 2.5, dy * 2.5, storm.strength * 3, 3);
+                    const tint = mixColor(colors[0], colors[1], storm.tint * 0.5 + swirl * 0.5);
+                    result = mixColor(result, tint, (1 - d) * storm.strength * 0.78);
+                }
+            }
+            return result;
+        }
+
+        function shadeMaterial(material, normal, z, lat, type) {
+            const lightDir = normalize(-0.48, 0.24, 0.84);
+            const dot = normal[0] * lightDir[0] + normal[1] * lightDir[1] + normal[2] * lightDir[2];
+            const day = smoothstep(-0.24, 0.95, dot);
+            const limb = Math.pow(1 - z, 1.65);
+            let ambient = 0.16;
+            let diffuse = 0.98;
+            if (type.shade === 'airless') { ambient = 0.05; diffuse = 1.1; }
+            if (type.shade === 'soft') { ambient = 0.32; diffuse = 0.65; }
+            if (type.shade === 'hot') { ambient = 0.14; diffuse = 0.9; }
+            const brightness = ambient + diffuse * day;
+            let color = scaleColor(material.color, brightness);
+
+            if (material.water && day > 0.2) {
+                const spec = Math.pow(clamp(dot), 42) * 0.8;
+                color = addColor(color, [150, 220, 255], spec);
+            }
+
+            if (material.emissive > 0) {
+                color = addColor(color, material.color, material.emissive * (1 - day * 0.35));
+            }
+
+            const rimTint = type.atmosphere || [180, 210, 255];
+            const rimAmount = limb * (type.shade === 'airless' ? 0.06 : 0.42) * smoothstep(-0.35, 0.5, dot + 0.35);
+            color = addColor(color, rimTint, rimAmount);
+
+            const nightBlue = type.shade === 'hot' ? [45, 7, 2] : [2, 8, 28];
+            color = mixColor(nightBlue, color, clamp(0.25 + day * 0.95 + material.emissive * 0.7));
+            return color;
+        }
+
+        function renderFrame(timestamp) {
+            if (!state.noise) regenerate();
+            const frameStart = performance.now();
+            if (!state.lastTime) state.lastTime = timestamp;
+            const dt = Math.min(64, timestamp - state.lastTime) / 1000;
+            state.lastTime = timestamp;
+            state.rotation += dt * state.rotationSpeed * 0.55;
+
+            drawBackground(timestamp);
+            drawPlanet(timestamp);
+
+            const cost = performance.now() - frameStart;
+            state.frameSamples.push(cost);
+            if (state.frameSamples.length > 45) state.frameSamples.shift();
+            state.frameCount++;
+            if (state.frameCount % 30 === 0) updateMetrics();
+
+            requestAnimationFrame(renderFrame);
+        }
+
+        function drawBackground(timestamp) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const gradient = ctx.createRadialGradient(canvas.width * 0.5, canvas.height * 0.5, 40, canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.74);
+            gradient.addColorStop(0, '#101b3a');
+            gradient.addColorStop(0.45, '#061020');
+            gradient.addColorStop(1, '#020617');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!state.showStars) return;
+            ctx.save();
+            for (const star of state.stars) {
+                const alpha = star.a * (0.72 + Math.sin(timestamp * 0.001 * star.twinkle + star.x) * 0.28);
+                ctx.fillStyle = `rgba(226, 242, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.r, 0, TAU);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawPlanet(timestamp) {
+            const size = state.renderSize;
+            const image = ctx.createImageData(size, size);
+            const data = image.data;
+            const radius = size * 0.475;
+            const center = size / 2;
+            const type = PLANET_TYPES[state.typeKey];
+            const cosR = Math.cos(state.rotation);
+            const sinR = Math.sin(state.rotation);
+            const cloudRotation = state.rotation * 1.22 + timestamp * 0.000025;
+            let visiblePixels = 0;
+
+            for (let py = 0; py < size; py++) {
+                const ny = -(py + 0.5 - center) / radius;
+                for (let px = 0; px < size; px++) {
+                    const idx = (py * size + px) * 4;
+                    const nx = (px + 0.5 - center) / radius;
+                    const r2 = nx * nx + ny * ny;
+                    if (r2 > 1) {
+                        data[idx + 3] = 0;
+                        continue;
+                    }
+                    visiblePixels++;
+                    const nz = Math.sqrt(1 - r2);
+                    const sx = nx * cosR + nz * sinR;
+                    const sy = ny;
+                    const sz = -nx * sinR + nz * cosR;
+                    const lat = Math.asin(clamp(sy, -1, 1));
+                    const lon = Math.atan2(sx, sz);
+                    const u = lon / TAU + 0.5;
+                    const v = 0.5 - lat / Math.PI;
+                    const material = sampleTexture(state.texture, u, v);
+                    let color = shadeMaterial(material, [nx, ny, nz], nz, lat, type);
+
+                    if (state.showClouds && type.clouds) {
+                        const cloudU = u + cloudRotation * 0.035;
+                        const clouds = sampleCloudTexture(state.cloudTexture, cloudU, v);
+                        if (clouds > 0.01) {
+                            const cloudTint = state.typeKey === 'toxic' ? [188, 255, 120] : [245, 250, 255];
+                            const lightBoost = smoothstep(-0.1, 0.8, nx * -0.48 + ny * 0.24 + nz * 0.84);
+                            color = mixColor(color, cloudTint, clouds * (0.34 + lightBoost * 0.3));
+                        }
+                    }
+
+                    data[idx] = color[0];
+                    data[idx + 1] = color[1];
+                    data[idx + 2] = color[2];
+                    data[idx + 3] = 255;
+                }
+            }
+
+            const planetCanvas = document.createElement('canvas');
+            planetCanvas.width = size;
+            planetCanvas.height = size;
+            planetCanvas.getContext('2d').putImageData(image, 0, 0);
+
+            const drawSize = Math.min(canvas.width, canvas.height) * 0.78;
+            const dx = (canvas.width - drawSize) / 2;
+            const dy = (canvas.height - drawSize) / 2 - 8;
+
+            ctx.save();
+            ctx.shadowColor = type.atmosphere ? `rgba(${type.atmosphere[0]}, ${type.atmosphere[1]}, ${type.atmosphere[2]}, 0.42)` : 'rgba(125, 211, 252, 0.22)';
+            ctx.shadowBlur = type.shade === 'airless' ? 8 : 26;
+            ctx.drawImage(planetCanvas, dx, dy, drawSize, drawSize);
+            ctx.restore();
+
+            drawAtmosphere(dx, dy, drawSize, type);
+
+            if (state.frameCount === 1) {
+                log('First planet frame rendered', { visiblePixels, renderSize: size, type: state.typeKey });
+            }
+        }
+
+        function drawAtmosphere(x, y, size, type) {
+            if (type.shade === 'airless') return;
+            const cx = x + size / 2;
+            const cy = y + size / 2;
+            const radius = size / 2;
+            const tint = type.atmosphere || [125, 211, 252];
+            const gradient = ctx.createRadialGradient(cx, cy, radius * 0.84, cx, cy, radius * 1.08);
+            gradient.addColorStop(0, `rgba(${tint[0]}, ${tint[1]}, ${tint[2]}, 0)`);
+            gradient.addColorStop(0.72, `rgba(${tint[0]}, ${tint[1]}, ${tint[2]}, 0.08)`);
+            gradient.addColorStop(1, `rgba(${tint[0]}, ${tint[1]}, ${tint[2]}, 0.28)`);
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * 1.08, 0, TAU);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function updateMetrics() {
+            const type = PLANET_TYPES[state.typeKey];
+            const avg = state.frameSamples.length
+                ? state.frameSamples.reduce((sum, value) => sum + value, 0) / state.frameSamples.length
+                : 0;
+            document.getElementById('metric-type').textContent = `${type.icon} ${type.name}`;
+            document.getElementById('metric-seed').textContent = state.seed;
+            document.getElementById('metric-frame').textContent = avg ? `${avg.toFixed(1)}ms` : 'warming up';
+            document.getElementById('planet-description').innerHTML = `<strong>${type.icon} ${type.name}.</strong> ${type.description}`;
+        }
+
+        window.addEventListener('error', event => {
+            log('Unhandled runtime error', {
+                message: event.message,
+                filename: event.filename,
+                line: event.lineno,
+                column: event.colno
+            }, 'error');
+        });
+
+        window.addEventListener('unhandledrejection', event => {
+            log('Unhandled promise rejection', { reason: String(event.reason) }, 'error');
+        });
+
+        initControls();
+        regenerate();
+        requestAnimationFrame(renderFrame);
+    </script>
+</body>
+</html>
