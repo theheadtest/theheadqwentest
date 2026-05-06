@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Algorithm Comparison - Idea Lab</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 30px;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .controls-panel {
+            flex: 0 0 300px;
+            padding-right: 30px;
+            border-right: 2px solid #eee;
+        }
+
+        .controls-panel h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .control-group input[type="number"],
+        .control-group input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .control-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-panel {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 80vh;
+            padding-left: 30px;
+        }
+
+        .results-panel h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .map-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #e9ecef;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .map-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .map-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .map-card .description {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .map-card canvas {
+            width: 100%;
+            max-width: 512px;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            display: block;
+        }
+
+        .stats {
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .stats strong {
+            color: #667eea;
+        }
+
+        .placeholder {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .placeholder-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .controls-panel {
+                border-right: none;
+                border-bottom: 2px solid #eee;
+                padding-right: 0;
+                padding-bottom: 30px;
+            }
+
+            .results-panel {
+                padding-left: 0;
+            }
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: background 0.3s;
+        }
+
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">← Back to Idea Lab</a>
+        
+        <header>
+            <h1>🗺️ Map Algorithm Comparison</h1>
+            <p>Generate fantasy maps using four different algorithms and compare the results</p>
+        </header>
+
+        <div class="main-content">
+            <div class="controls-panel">
+                <h2>⚙️ Settings</h2>
+                
+                <div class="control-group">
+                    <label for="seed">Seed (optional)</label>
+                    <input type="text" id="seed" placeholder="Random if empty">
+                </div>
+
+                <div class="control-group">
+                    <label for="scale">Noise Scale</label>
+                    <input type="number" id="scale" value="100" min="10" max="500" step="10">
+                </div>
+
+                <div class="control-group">
+                    <label for="octaves">Octaves (detail)</label>
+                    <input type="number" id="octaves" value="6" min="1" max="10" step="1">
+                </div>
+
+                <div class="control-group">
+                    <label for="persistence">Persistence</label>
+                    <input type="number" id="persistence" value="0.5" min="0.1" max="1" step="0.1">
+                </div>
+
+                <div class="control-group">
+                    <label for="waterLevel">Water Level</label>
+                    <input type="number" id="waterLevel" value="0.4" min="0.1" max="0.9" step="0.05">
+                </div>
+
+                <button class="btn" id="generateBtn" onclick="generateAllMaps()">
+                    🚀 Generate All Maps
+                </button>
+            </div>
+
+            <div class="results-panel">
+                <h2>📊 Results</h2>
+                <div id="results">
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🎲</div>
+                        <p>Click "Generate All Maps" to create your fantasy worlds!</p>
+                        <p style="margin-top: 10px; font-size: 0.9em;">
+                            Each algorithm will produce a unique 512x512 map<br>
+                            using the same seed and parameters.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple seeded random number generator
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed;
+            }
+
+            next() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+        }
+
+        // Perlin Noise implementation
+        const Perlin = {
+            permutation: [],
+            
+            init(seed) {
+                const rng = new SeededRandom(seed);
+                this.permutation = [];
+                for (let i = 0; i < 256; i++) {
+                    this.permutation[i] = i;
+                }
+                // Fisher-Yates shuffle
+                for (let i = 255; i > 0; i--) {
+                    const j = Math.floor(rng.next() * (i + 1));
+                    [this.permutation[i], this.permutation[j]] = [this.permutation[j], this.permutation[i]];
+                }
+                this.permutation = [...this.permutation, ...this.permutation];
+            },
+
+            fade(t) {
+                return t * t * t * (t * (t * 6 - 15) + 10);
+            },
+
+            lerp(a, b, t) {
+                return a + t * (b - a);
+            },
+
+            grad(hash, x, y) {
+                const h = hash & 3;
+                const u = h < 2 ? x : y;
+                const v = h < 2 ? y : x;
+                return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+            },
+
+            noise(x, y) {
+                const X = Math.floor(x) & 255;
+                const Y = Math.floor(y) & 255;
+                x -= Math.floor(x);
+                y -= Math.floor(y);
+                const u = this.fade(x);
+                const v = this.fade(y);
+                const A = this.permutation[X] + Y;
+                const B = this.permutation[X + 1] + Y;
+                return this.lerp(
+                    this.lerp(this.grad(this.permutation[A], x, y), this.grad(this.permutation[B], x - 1, y), u),
+                    this.lerp(this.grad(this.permutation[A + 1], x, y - 1), this.grad(this.permutation[B + 1], x - 1, y - 1), u),
+                    v
+                );
+            },
+
+            octaveNoise(x, y, octaves, persistence, scale) {
+                let total = 0;
+                let frequency = 1 / scale;
+                let amplitude = 1;
+                let maxValue = 0;
+                
+                for (let i = 0; i < octaves; i++) {
+                    total += this.noise(x * frequency, y * frequency) * amplitude;
+                    maxValue += amplitude;
+                    amplitude *= persistence;
+                    frequency *= 2;
+                }
+                
+                return total / maxValue;
+            }
+        };
+
+        // Map generation algorithms
+        const Algorithms = {
+            // 1. Perlin/Simplex Noise
+            perlinNoise(width, height, seed, scale, octaves, persistence, waterLevel) {
+                Perlin.init(seed);
+                const data = [];
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const value = Perlin.octaveNoise(x, y, octaves, persistence, scale);
+                        const normalized = (value + 1) / 2; // Normalize to 0-1
+                        data.push(normalized);
+                    }
+                }
+                
+                return data;
+            },
+
+            // 2. Voronoi Diagram
+            voronoi(width, height, seed, scale, octaves, persistence, waterLevel) {
+                const rng = new SeededRandom(seed);
+                const numPoints = Math.floor((width * height) / (scale * scale));
+                const points = [];
+                
+                for (let i = 0; i < numPoints; i++) {
+                    points.push({
+                        x: rng.next() * width,
+                        y: rng.next() * height,
+                        value: rng.next()
+                    });
+                }
+                
+                const data = [];
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        let minDist = Infinity;
+                        let closestValue = 0;
+                        
+                        for (const point of points) {
+                            const dist = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
+                            if (dist < minDist) {
+                                minDist = dist;
+                                closestValue = point.value;
+                            }
+                        }
+                        
+                        data.push(closestValue);
+                    }
+                }
+                
+                return data;
+            },
+
+            // 3. Cellular Automata
+            cellularAutomata(width, height, seed, scale, octaves, persistence, waterLevel) {
+                const rng = new SeededRandom(seed);
+                const grid = [];
+                
+                // Initialize with random values
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        grid.push(rng.next() < 0.45 ? 0 : 1);
+                    }
+                }
+                
+                // Apply cellular automata rules (smoothing)
+                const iterations = 4;
+                for (let iter = 0; iter < iterations; iter++) {
+                    const newGrid = [...grid];
+                    
+                    for (let y = 1; y < height - 1; y++) {
+                        for (let x = 1; x < width - 1; x++) {
+                            let neighbors = 0;
+                            for (let dy = -1; dy <= 1; dy++) {
+                                for (let dx = -1; dx <= 1; dx++) {
+                                    if (dx !== 0 || dy !== 0) {
+                                        neighbors += grid[(y + dy) * width + (x + dx)];
+                                    }
+                                }
+                            }
+                            
+                            const idx = y * width + x;
+                            if (grid[idx] === 1) {
+                                newGrid[idx] = neighbors >= 4 ? 1 : 0;
+                            } else {
+                                newGrid[idx] = neighbors >= 5 ? 1 : 0;
+                            }
+                        }
+                    }
+                    
+                    for (let i = 0; i < grid.length; i++) {
+                        grid[i] = newGrid[i];
+                    }
+                }
+                
+                return grid.map(v => v === 1 ? 0.6 + rng.next() * 0.4 : rng.next() * 0.4);
+            },
+
+            // 4. Midpoint Displacement (Diamond-Square)
+            midpointDisplacement(width, height, seed, scale, octaves, persistence, waterLevel) {
+                const rng = new SeededRandom(seed);
+                const size = 512; // Power of 2
+                const grid = new Array(size * size).fill(0);
+                
+                console.log('[Midpoint] Starting generation with seed:', seed);
+                
+                // Initialize corners
+                grid[0] = rng.next();
+                grid[size - 1] = rng.next();
+                grid[(size - 1) * size] = rng.next();  // Fixed: was incorrectly set to grid[size - 1]
+                grid[size * (size - 1) + size - 1] = rng.next();
+                
+                console.log('[Midpoint] Corners initialized:', grid[0], grid[size - 1], grid[(size - 1) * size], grid[size * (size - 1) + size - 1]);
+                
+                let step = size - 1;
+                let roughness = 0.5;
+                let iterations = 0;
+                
+                while (step > 1) {
+                    iterations++;
+                    const half = Math.floor(step / 2);
+                    
+                    console.log(`[Midpoint] Iteration ${iterations}, step=${step}, half=${half}, roughness=${roughness}`);
+                    
+                    // Diamond step
+                    for (let y = 0; y < size - 1; y += step) {
+                        for (let x = 0; x < size - 1; x += step) {
+                            const tl = grid[y * size + x];
+                            const tr = grid[y * size + x + step];
+                            const bl = grid[(y + step) * size + x];
+                            const br = grid[(y + step) * size + x + step];
+                            
+                            const avg = (tl + tr + bl + br) / 4;
+                            const rand = (rng.next() - 0.5) * roughness;
+                            grid[(y + half) * size + (x + half)] = avg + rand;
+                        }
+                    }
+                    
+                    // Square step
+                    for (let y = 0; y < size; y += half) {
+                        for (let x = (y + half) % step; x < size; x += step) {
+                            let sum = 0;
+                            let count = 0;
+                            
+                            if (y >= half) { sum += grid[(y - half) * size + x]; count++; }
+                            if (y + half < size) { sum += grid[(y + half) * size + x]; count++; }
+                            if (x >= half) { sum += grid[y * size + (x - half)]; count++; }
+                            if (x + half < size) { sum += grid[y * size + (x + half)]; count++; }
+                            
+                            if (count > 0) {
+                                const avg = sum / count;
+                                const rand = (rng.next() - 0.5) * roughness;
+                                grid[y * size + x] = avg + rand;
+                            }
+                        }
+                    }
+                    
+                    step = half;
+                    roughness *= persistence;
+                }
+                
+                console.log('[Midpoint] Generation complete, iterations:', iterations);
+                
+                // Normalize
+                let min = Infinity, max = -Infinity;
+                for (let i = 0; i < grid.length; i++) {
+                    if (!isNaN(grid[i])) {
+                        min = Math.min(min, grid[i]);
+                        max = Math.max(max, grid[i]);
+                    }
+                }
+                
+                console.log('[Midpoint] Min:', min, 'Max:', max);
+                
+                if (max === min) {
+                    console.warn('[Midpoint] All values are identical!');
+                    return grid.map(() => 0.5);
+                }
+                
+                return grid.map(v => isNaN(v) ? 0.5 : (v - min) / (max - min));
+            },
+
+            // 5. Hybrid (Perlin + Voronoi)
+            hybrid(width, height, seed, scale, octaves, persistence, waterLevel) {
+                console.log('[Hybrid] Starting generation with seed:', seed);
+                
+                // Generate Perlin noise base
+                const perlinData = Algorithms.perlinNoise(width, height, seed, scale, octaves, persistence, waterLevel);
+                
+                // Generate Voronoi regions
+                const rng = new SeededRandom(seed + 1000);
+                const numPoints = Math.floor((width * height) / (scale * scale));
+                const points = [];
+                
+                for (let i = 0; i < numPoints; i++) {
+                    points.push({
+                        x: rng.next() * width,
+                        y: rng.next() * height,
+                        value: rng.next() * 0.3 + 0.85 // Bias toward higher values for variation
+                    });
+                }
+                
+                const data = [];
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const idx = y * width + x;
+                        const perlinValue = perlinData[idx];
+                        
+                        // Find closest Voronoi point
+                        let minDist = Infinity;
+                        let closestValue = 1;
+                        
+                        for (const point of points) {
+                            const dist = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
+                            if (dist < minDist) {
+                                minDist = dist;
+                                closestValue = point.value;
+                            }
+                        }
+                        
+                        // Blend: use Perlin as base, multiply by Voronoi for regional variation
+                        const blended = perlinValue * closestValue;
+                        data.push(Math.min(1, Math.max(0, blended)));
+                    }
+                }
+                
+                console.log('[Hybrid] Generation complete');
+                return data;
+            }
+        };
+
+        // Color mapping for terrain
+        function getColor(value, waterLevel) {
+            if (value < waterLevel) {
+                // Deep to shallow water
+                const t = value / waterLevel;
+                return `rgb(${Math.floor(20 + 40 * t)}, ${Math.floor(60 + 80 * t)}, ${Math.floor(120 + 80 * t)})`;
+            } else if (value < waterLevel + 0.1) {
+                // Beach
+                return 'rgb(210, 190, 140)';
+            } else if (value < waterLevel + 0.3) {
+                // Grass/plains
+                const t = (value - waterLevel - 0.1) / 0.2;
+                return `rgb(${Math.floor(60 + 60 * t)}, ${Math.floor(140 - 40 * t)}, ${Math.floor(60 - 20 * t)})`;
+            } else if (value < waterLevel + 0.6) {
+                // Forest/hills
+                const t = (value - waterLevel - 0.3) / 0.3;
+                return `rgb(${Math.floor(80 - 40 * t)}, ${Math.floor(120 - 60 * t)}, ${Math.floor(60 - 30 * t)})`;
+            } else {
+                // Mountains/snow
+                const t = (value - waterLevel - 0.6) / 0.4;
+                return `rgb(${Math.floor(120 + 80 * t)}, ${Math.floor(120 + 80 * t)}, ${Math.floor(120 + 80 * t)})`;
+            }
+        }
+
+        // Render map to canvas
+        function renderMap(canvasId, data, width, height, waterLevel) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            const imageData = ctx.createImageData(width, height);
+            
+            for (let i = 0; i < data.length; i++) {
+                const color = getColor(data[i], waterLevel);
+                const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                
+                if (match) {
+                    imageData.data[i * 4] = parseInt(match[1]);
+                    imageData.data[i * 4 + 1] = parseInt(match[2]);
+                    imageData.data[i * 4 + 2] = parseInt(match[3]);
+                    imageData.data[i * 4 + 3] = 255;
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // Generate all maps
+        async function generateAllMaps() {
+            const btn = document.getElementById('generateBtn');
+            const seedInput = document.getElementById('seed').value;
+            const scale = parseInt(document.getElementById('scale').value);
+            const octaves = parseInt(document.getElementById('octaves').value);
+            const persistence = parseFloat(document.getElementById('persistence').value);
+            const waterLevel = parseFloat(document.getElementById('waterLevel').value);
+            
+            const seed = seedInput ? 
+                seedInput.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 
+                Math.floor(Math.random() * 1000000);
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating...';
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            const algorithms = [
+                {
+                    name: 'Perlin Noise',
+                    description: 'Smooth, natural-looking terrain using layered noise functions. Creates organic coastlines and gradual elevation changes.',
+                    fn: Algorithms.perlinNoise
+                },
+                {
+                    name: 'Voronoi Diagram',
+                    description: 'Polygon-based regions creating distinct biomes and territories. Produces a cellular, stained-glass appearance.',
+                    fn: Algorithms.voronoi
+                },
+                {
+                    name: 'Cellular Automata',
+                    description: 'Rule-based simulation creating cave-like structures and organic patterns. Great for underground maps or archipelagos.',
+                    fn: Algorithms.cellularAutomata
+                },
+                {
+                    name: 'Midpoint Displacement',
+                    description: 'Fractal algorithm creating realistic mountain ranges and rugged terrain. Classic technique for heightmap generation.',
+                    fn: Algorithms.midpointDisplacement
+                },
+                {
+                    name: 'Hybrid (Perlin + Voronoi)',
+                    description: 'Combines smooth Perlin noise base with Voronoi region variations. Best of both worlds: natural terrain with distinct biome regions.',
+                    fn: Algorithms.hybrid
+                }
+            ];
+            
+            const width = 512;
+            const height = 512;
+            
+            for (let i = 0; i < algorithms.length; i++) {
+                const algo = algorithms[i];
+                
+                // Create card
+                const card = document.createElement('div');
+                card.className = 'map-card';
+                card.innerHTML = `
+                    <h3>${i + 1}. ${algo.name}</h3>
+                    <p class="description">${algo.description}</p>
+                    <canvas id="canvas-${i}" width="${width}" height="${height}"></canvas>
+                    <div class="stats" id="stats-${i}">Generating...</div>
+                `;
+                resultsDiv.appendChild(card);
+                
+                // Generate and render
+                const startTime = performance.now();
+                const data = algo.fn(width, height, seed + i, scale, octaves, persistence, waterLevel);
+                const endTime = performance.now();
+                
+                renderMap(`canvas-${i}`, data, width, height, waterLevel);
+                
+                document.getElementById(`stats-${i}`).innerHTML = `
+                    <strong>Generation time:</strong> ${(endTime - startTime).toFixed(2)}ms | 
+                    <strong>Seed:</strong> ${seed + i}
+                `;
+                
+                // Small delay between generations for visual effect
+                if (i < algorithms.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '🚀 Generate All Maps';
+        }
+    </script>
+</body>
+</html>
