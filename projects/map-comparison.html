@@ -702,7 +702,8 @@ function runAzgaar() {
     const noiseInt = parseFloat(document.getElementById('az-noise').value);
     const riverCount = parseInt(document.getElementById('az-rivers').value);
     
-    console.log("Azgaar: Generating world...", {numPoints, radius, noiseInt, riverCount});
+    console.log("=== [AZGAAR] Starting Generation ===");
+    console.log("Azgaar: Generating world...", {numPoints, radius, noiseInt, riverCount, seed: seedStr});
 
     // 1. Generate Points (with simple jitter)
     azPoints = [];
@@ -711,14 +712,18 @@ function runAzgaar() {
     const centerX = w/2, centerY = h/2;
     const minDim = Math.min(w, h);
     
+    console.log(`[AZGAAR] Canvas size: ${w}x${h}, generating ${numPoints} points...`);
+    
     for(let i=0; i<numPoints; i++) {
         // Random point in circle
         const angle = rng.next() * Math.PI * 2;
         const r = Math.sqrt(rng.next()) * (minDim/2) * radius;
         azPoints.push([centerX + Math.cos(angle)*r, centerY + Math.sin(angle)*r]);
     }
+    console.log(`[AZGAAR] Generated ${azPoints.length} initial points.`);
     
     // 2. Lloyd's Relaxation (3 iterations)
+    console.log("[AZGAAR] Starting Lloyd's relaxation...");
     for(let iter=0; iter<3; iter++) {
         azDelaunay = d3.Delaunay.from(azPoints);
         azVoronoi = azDelaunay.voronoi([0, 0, w, h]);
@@ -743,11 +748,14 @@ function runAzgaar() {
             newPoints.push([cx, cy]);
         }
         azPoints = newPoints;
+        console.log(`[AZGAAR] Relaxation iteration ${iter+1} complete.`);
     }
+    console.log("[AZGAAR] Relaxation complete.");
     
     // Rebuild Voronoi after relaxation
     azDelaunay = d3.Delaunay.from(azPoints);
     azVoronoi = azDelaunay.voronoi([0, 0, w, h]);
+    console.log(`[AZGAAR] Voronoi diagram created with ${azPoints.length} cells.`);
     
     // 3. Initialize Cells
     azCells = azPoints.map((p, i) => ({
@@ -755,14 +763,17 @@ function runAzgaar() {
         elevation: 0, moisture: 0, biome: BIOMES.OCEAN,
         neighbors: [] // indices
     }));
+    console.log(`[AZGAAR] Initialized ${azCells.length} cells.`);
     
     // Find neighbors via Delaunay
     for(let i=0; i<numPoints; i++) {
         const neighbors = azDelaunay.neighbors(i);
         for(let n of neighbors) azCells[i].neighbors.push(n);
     }
+    console.log("[AZGAAR] Neighbor relationships established.");
     
     // 4. Height Map (Radial + Noise)
+    let elevMin = 1, elevMax = 0;
     for(let i=0; i<numPoints; i++) {
         const dx = (azPoints[i][0] - centerX) / (minDim/2);
         const dy = (azPoints[i][1] - centerY) / (minDim/2);
@@ -782,7 +793,10 @@ function runAzgaar() {
         }
         
         azCells[i].elevation = Math.max(0, Math.min(1, h));
+        if(azCells[i].elevation < elevMin) elevMin = azCells[i].elevation;
+        if(azCells[i].elevation > elevMax) elevMax = azCells[i].elevation;
     }
+    console.log(`[AZGAAR] Height map generated. Elevation range: ${elevMin.toFixed(3)} - ${elevMax.toFixed(3)}`);
     
     // 5. Moisture Map (Precipitation)
     // Reset moisture
@@ -813,6 +827,9 @@ function runAzgaar() {
             azCells[i].moisture = sum / count;
         }
     }
+    let moistMin = 1, moistMax = 0;
+    azCells.forEach(c => { if(c.moisture < moistMin) moistMin = c.moisture; if(c.moisture > moistMax) moistMax = c.moisture; });
+    console.log(`[AZGAAR] Moisture map generated. Range: ${moistMin.toFixed(3)} - ${moistMax.toFixed(3)}`);
     
     // 6. Rivers (Erosion)
     for(let r=0; r<riverCount; r++) {
@@ -843,28 +860,35 @@ function runAzgaar() {
             curr = next;
         }
     }
+    console.log(`[AZGAAR] River erosion complete (${riverCount} rivers).`);
     
     // 7. Assign Biomes
     const legendSet = new Set();
+    let oceanCount = 0, landCount = 0;
     for(let i=0; i<numPoints; i++) {
         const c = azCells[i];
         const e = c.elevation;
         const m = c.moisture;
         
-        if(e < 0.15) c.biome = BIOMES.OCEAN;
-        else if(e < 0.2) c.biome = BIOMES.BEACH;
-        else if(e > 0.8) c.biome = BIOMES.SNOW;
-        else if(e > 0.6) c.biome = BIOMES.MOUNTAIN;
+        if(e < 0.15) { c.biome = BIOMES.OCEAN; oceanCount++; }
+        else if(e < 0.2) { c.biome = BIOMES.BEACH; landCount++; }
+        else if(e > 0.8) { c.biome = BIOMES.SNOW; landCount++; }
+        else if(e > 0.6) { c.biome = BIOMES.MOUNTAIN; landCount++; }
         else {
+            landCount++;
             if(m < 0.2) c.biome = BIOMES.DESERT;
             else if(m < 0.5) c.biome = BIOMES.GRASS;
             else c.biome = BIOMES.FOREST;
         }
         legendSet.add(c.biome.name);
     }
+    console.log(`[AZGAAR] Biomes assigned. Ocean: ${oceanCount}, Land: ${landCount}`);
+    console.log(`[AZGAAR] Biome types:`, Array.from(legendSet));
     
     updateLegend(legendSet);
+    console.log("[AZGAAR] Calling drawAzgaar()...");
     drawAzgaar();
+    console.log("=== [AZGAAR] Generation Complete ===");
 }
 
 function regenerateAzgaarTerrain() {
