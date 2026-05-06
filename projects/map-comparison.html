@@ -360,12 +360,15 @@ function switchTab(tabId) {
     document.getElementById(tabId).classList.add('active');
     document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
     
-    if(tabId === 'tab2' && azCells.length === 0) {
-        // Initialize azgaar if first time visiting tab
-        runAzgaar();
-    } else if(tabId === 'tab2') {
-        // Redraw when switching to tab2 even if already initialized
-        drawAzgaar();
+    if(tabId === 'tab2') {
+        resizeAzgaarCanvas();
+        if(azCells.length === 0) {
+            // Initialize azgaar if first time visiting tab
+            runAzgaar();
+        } else {
+            // Redraw when switching to tab2 even if already initialized
+            drawAzgaar();
+        }
     }
 }
 
@@ -634,6 +637,7 @@ let azDelaunay = null;
 let azVoronoi = null;
 let showBiomes = true;
 let canvas, ctx;
+let azgaarResizeHandlerAttached = false;
 
 // Biome Colors
 const BIOMES = {
@@ -648,26 +652,36 @@ const BIOMES = {
     SNOW: { color: [240, 240, 250], name: "Snow" }
 };
 
+function resizeAzgaarCanvas() {
+    if (!canvas) return false;
+
+    const parent = canvas.parentElement;
+    const width = Math.floor(parent.clientWidth || parent.getBoundingClientRect().width);
+    const height = Math.floor(parent.clientHeight || parent.getBoundingClientRect().height);
+
+    // Hidden tabs report a 0x0 layout. Keep the previous backing store so the
+    // next visible draw does not build a zero-sized Voronoi diagram.
+    if (width <= 0 || height <= 0) return false;
+
+    if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+    }
+
+    return true;
+}
+
 function initAzgaar() {
     canvas = document.getElementById('azgaar-canvas');
     ctx = canvas.getContext('2d');
     
-    // Set initial canvas size if not set
-    if(canvas.width === 0 || canvas.height === 0) {
-        const parent = canvas.parentElement;
-        canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight;
+    if (!azgaarResizeHandlerAttached) {
+        window.addEventListener('resize', () => {
+            if (resizeAzgaarCanvas() && azPoints.length > 0) drawAzgaar();
+        });
+        azgaarResizeHandlerAttached = true;
     }
-    
-    // Handle resize
-    const resize = () => {
-        const parent = canvas.parentElement;
-        canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight;
-        if(azPoints.length > 0) drawAzgaar();
-    };
-    window.addEventListener('resize', resize);
-    resize();
+    resizeAzgaarCanvas();
     
     // Tooltip
     const tooltip = document.getElementById('az-tooltip');
@@ -705,6 +719,10 @@ function initAzgaar() {
 
 function runAzgaar() {
     if(!ctx) initAzgaar();
+    if(!resizeAzgaarCanvas()) {
+        console.warn('[AZGAAR] Canvas is not visible yet; open the Azgaar tab before generating.');
+        return;
+    }
     
     const seedStr = document.getElementById('az-seed').value;
     const rng = new RNG(seedStr);
@@ -955,6 +973,7 @@ function updateLegend(set) {
 
 function drawAzgaar() {
     if(!ctx || azCells.length === 0) return;
+    if(!resizeAzgaarCanvas()) return;
     const w = canvas.width;
     const h = canvas.height;
     
