@@ -3,722 +3,950 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Map Algorithm Comparison - Idea Lab</title>
+    <title>Fantasy Map Lab - Algorithm Comparison & Azgaar Style</title>
+    <!-- D3 Delaunay for Voronoi -->
+    <script src="https://cdn.jsdelivr.net/npm/d3-delaunay@6"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --bg-color: #1a1a2e;
+            --panel-bg: #16213e;
+            --text-color: #e94560;
+            --accent: #0f3460;
+            --light-text: #f1f1f1;
         }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-
-        header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .main-content {
+            background-color: var(--bg-color);
+            color: var(--light-text);
+            margin: 0;
             display: flex;
-            gap: 30px;
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            background-color: var(--panel-bg);
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 2px solid var(--text-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 { margin: 0; font-size: 1.5rem; }
+        .back-link {
+            color: var(--light-text);
+            text-decoration: none;
+            border: 1px solid var(--light-text);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .back-link:hover { background-color: var(--text-color); border-color: var(--text-color); }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: var(--panel-bg);
+            padding: 0 1rem;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #888;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            color: var(--light-text);
+            border-bottom-color: var(--text-color);
+            background: rgba(255,255,255,0.05);
+        }
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .tab-content.active { display: flex; }
+
+        /* Layout for Tab 1 (Comparison) */
+        #tab1-layout {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            width: 300px;
+            background: var(--panel-bg);
+            padding: 1.5rem;
+            overflow-y: auto;
+            border-right: 1px solid var(--accent);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .results-area {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            align-content: start;
+        }
+        
+        /* Layout for Tab 2 (Azgaar) */
+        #tab2-layout {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        .azgaar-controls {
+            width: 320px;
+            background: var(--panel-bg);
+            padding: 1.5rem;
+            border-right: 1px solid var(--accent);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+        }
+        .azgaar-viewer {
+            flex: 1;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        .controls-panel {
-            flex: 0 0 300px;
-            padding-right: 30px;
-            border-right: 2px solid #eee;
-        }
-
-        .controls-panel h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
-
+        /* Common Controls */
         .control-group {
-            margin-bottom: 20px;
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
         }
-
-        .control-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
+        .control-group h3 { margin-top: 0; color: var(--text-color); font-size: 1.1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            background: #0f3460;
+            border: 1px solid #333;
+            color: white;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
-
-        .control-group input[type="number"],
-        .control-group input[type="text"] {
+        input[type="range"] { width: 100%; }
+        button {
             width: 100%;
             padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        .control-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--text-color);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
+            border-radius: 4px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-top: 10px;
+            font-weight: bold;
+            margin-top: 5px;
+            transition: background 0.2s;
         }
+        button:hover { background: #c0354c; }
+        button.secondary { background: #444; }
+        button.secondary:hover { background: #666; }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .results-panel {
-            flex: 1;
-            overflow-y: auto;
-            max-height: 80vh;
-            padding-left: 30px;
-        }
-
-        .results-panel h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
-
+        /* Map Cards */
         .map-card {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 25px;
-            border: 2px solid #e9ecef;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-        .map-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-
-        .map-card h3 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 1.3em;
-        }
-
-        .map-card .description {
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-
-        .map-card canvas {
-            width: 100%;
-            max-width: 512px;
-            height: auto;
+            background: var(--panel-bg);
             border-radius: 8px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            display: block;
-        }
-
-        .stats {
-            margin-top: 15px;
-            padding: 10px;
-            background: white;
-            border-radius: 6px;
-            font-size: 0.85em;
-            color: #666;
-        }
-
-        .stats strong {
-            color: #667eea;
-        }
-
-        .placeholder {
+            padding: 1rem;
             text-align: center;
-            padding: 60px 20px;
-            color: #999;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .map-card h3 { margin-top: 0; color: var(--text-color); }
+        canvas {
+            background: #000;
+            border-radius: 4px;
+            max-width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+        }
+        .stats {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-top: 0.5rem;
         }
 
-        .placeholder-icon {
-            font-size: 4em;
-            margin-bottom: 20px;
+        /* Azgaar Specifics */
+        #azgaar-canvas {
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            cursor: crosshair;
         }
-
-        @media (max-width: 900px) {
-            .main-content {
-                flex-direction: column;
-            }
-
-            .controls-panel {
-                border-right: none;
-                border-bottom: 2px solid #eee;
-                padding-right: 0;
-                padding-bottom: 30px;
-            }
-
-            .results-panel {
-                padding-left: 0;
-            }
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            pointer-events: none;
+            font-size: 0.85rem;
+            display: none;
+            z-index: 10;
+            border: 1px solid #555;
         }
-
-        .back-link {
-            display: inline-block;
-            color: white;
-            text-decoration: none;
-            padding: 10px 20px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 8px;
-            margin-bottom: 20px;
-            transition: background 0.3s;
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+            font-size: 0.75rem;
         }
+        .legend-item { display: flex; align-items: center; gap: 4px; }
+        .color-box { width: 12px; height: 12px; border-radius: 2px; }
 
-        .back-link:hover {
-            background: rgba(255,255,255,0.3);
-        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <a href="../index.html" class="back-link">← Back to Idea Lab</a>
-        
-        <header>
-            <h1>🗺️ Map Algorithm Comparison</h1>
-            <p>Generate fantasy maps using four different algorithms and compare the results</p>
-        </header>
 
-        <div class="main-content">
-            <div class="controls-panel">
-                <h2>⚙️ Settings</h2>
+<header>
+    <h1>Fantasy Map Lab</h1>
+    <a href="../index.html" class="back-link">← Back to Home</a>
+</header>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab1')">Algorithm Comparison</button>
+    <button class="tab-btn" onclick="switchTab('tab2')">Azgaar Simplified</button>
+</div>
+
+<!-- TAB 1: Algorithm Comparison -->
+<div id="tab1" class="tab-content active">
+    <div id="tab1-layout">
+        <div class="controls">
+            <div class="control-group">
+                <h3>Settings</h3>
+                <label>Seed</label>
+                <input type="text" id="seed" value="demo123">
                 
-                <div class="control-group">
-                    <label for="seed">Seed (optional)</label>
-                    <input type="text" id="seed" placeholder="Random if empty">
-                </div>
-
-                <div class="control-group">
-                    <label for="scale">Noise Scale</label>
-                    <input type="number" id="scale" value="100" min="10" max="500" step="10">
-                </div>
-
-                <div class="control-group">
-                    <label for="octaves">Octaves (detail)</label>
-                    <input type="number" id="octaves" value="6" min="1" max="10" step="1">
-                </div>
-
-                <div class="control-group">
-                    <label for="persistence">Persistence</label>
-                    <input type="number" id="persistence" value="0.5" min="0.1" max="1" step="0.1">
-                </div>
-
-                <div class="control-group">
-                    <label for="waterLevel">Water Level</label>
-                    <input type="number" id="waterLevel" value="0.4" min="0.1" max="0.9" step="0.05">
-                </div>
-
-                <button class="btn" id="generateBtn" onclick="generateAllMaps()">
-                    🚀 Generate All Maps
-                </button>
+                <label>Noise Scale</label>
+                <input type="range" id="scale" min="10" max="100" value="40">
+                
+                <label>Octaves</label>
+                <input type="range" id="octaves" min="1" max="6" value="4">
+                
+                <label>Persistence</label>
+                <input type="range" id="persistence" min="0.1" max="1.0" step="0.1" value="0.5">
+                
+                <label>Water Level</label>
+                <input type="range" id="water" min="0.2" max="0.8" step="0.05" value="0.4">
+                
+                <button onclick="generateAll()">Start Generation</button>
             </div>
-
-            <div class="results-panel">
-                <h2>📊 Results</h2>
-                <div id="results">
-                    <div class="placeholder">
-                        <div class="placeholder-icon">🎲</div>
-                        <p>Click "Generate All Maps" to create your fantasy worlds!</p>
-                        <p style="margin-top: 10px; font-size: 0.9em;">
-                            Each algorithm will produce a unique 512x512 map<br>
-                            using the same seed and parameters.
-                        </p>
-                    </div>
-                </div>
+            <div class="control-group">
+                <p style="font-size: 0.85rem; color: #aaa;">
+                    Generates 5 maps (512x512) sequentially using the same seed.
+                    Check console for logs.
+                </p>
             </div>
         </div>
+        <div class="results-area" id="results-container">
+            <!-- Maps injected here -->
+        </div>
     </div>
+</div>
 
-    <script>
-        // Simple seeded random number generator
-        class SeededRandom {
-            constructor(seed) {
-                this.seed = seed;
+<!-- TAB 2: Azgaar Simplified -->
+<div id="tab2" class="tab-content">
+    <div id="tab2-layout">
+        <div class="azgaar-controls">
+            <div class="control-group">
+                <h3>World Settings</h3>
+                <label>Seed</label>
+                <input type="text" id="az-seed" value="azgaar-test">
+                
+                <label>Map Size (Cells)</label>
+                <input type="range" id="az-size" min="200" max="800" step="50" value="400">
+                <span id="az-size-val" style="font-size:0.8rem; color:#aaa;">400 points</span>
+
+                <label>Island Radius</label>
+                <input type="range" id="az-radius" min="0.3" max="0.9" step="0.05" value="0.6">
+
+                <label>Noise Intensity</label>
+                <input type="range" id="az-noise" min="0" max="2" step="0.1" value="0.8">
+
+                <label>River Count</label>
+                <input type="range" id="az-rivers" min="0" max="20" step="1" value="8">
+            </div>
+
+            <div class="control-group">
+                <h3>Actions</h3>
+                <button onclick="runAzgaar()">Generate New World</button>
+                <button class="secondary" onclick="regenerateAzgaarTerrain()">Regenerate Terrain</button>
+                <button class="secondary" onclick="toggleBiomes()">Toggle Biome View</button>
+            </div>
+
+            <div class="control-group">
+                <h3>Legend</h3>
+                <div id="az-legend" class="legend"></div>
+            </div>
+            
+            <div class="control-group">
+                <p style="font-size: 0.8rem; color: #aaa;">
+                    Uses Voronoi + Lloyd's Relaxation + Height/Moisture maps.<br>
+                    Hover over map for cell details.
+                </p>
+            </div>
+        </div>
+        <div class="azgaar-viewer">
+            <canvas id="azgaar-canvas"></canvas>
+            <div id="az-tooltip" class="tooltip"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+/** 
+ * UTILS & NOISE 
+ */
+// Simple seeded random
+class RNG {
+    constructor(seed) {
+        this.seed = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    }
+    next() {
+        this.seed = (this.seed * 9301 + 49297) % 233280;
+        return this.seed / 233280;
+    }
+}
+
+// Simple Perlin Noise Implementation
+const Perlin = (function() {
+    const permutation = [151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,190,6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,88,237,149,56,87,174,20,125,136,171,168,68,175,74,165,71,134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,102,143,54,65,25,63,161,1,216,80,73,209,76,132,187,208,89,18,169,200,196,135,130,116,188,159,86,164,100,109,198,173,186,3,64,52,217,226,250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,223,183,170,213,119,248,152,2,44,154,163,70,221,153,101,155,167,43,172,9,129,22,39,253,19,98,108,110,79,113,224,232,178,185,112,104,218,246,97,228,251,34,242,193,238,210,144,12,191,179,162,241,81,51,145,235,249,14,239,107,49,192,214,31,181,199,106,157,184,84,204,176,115,121,50,45,127,4,150,254,138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180];
+    const p = new Array(512);
+    for (let i=0; i < 256; i++) p[256+i] = p[i] = permutation[i];
+
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(t, a, b) { return a + t * (b - a); }
+    function grad(hash, x, y, z) {
+        const h = hash & 15;
+        const u = h < 8 ? x : y, v = h < 4 ? y : h === 12 || h === 14 ? x : z;
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+    }
+
+    return {
+        noise: function(x, y, z) {
+            const X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255;
+            x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
+            const u = fade(x), v = fade(y), w = fade(z);
+            const A = p[X]+Y, AA = p[A]+Z, AB = p[A+1]+Z, B = p[X+1]+Y, BA = p[B]+Z, BB = p[B+1]+Z;
+            return lerp(w, lerp(v, lerp(u, grad(p[AA], x, y, z), grad(p[BA], x-1, y, z)),
+                                   lerp(u, grad(p[AB], x, y-1, z), grad(p[BB], x-1, y-1, z))),
+                           lerp(v, lerp(u, lerp(u, grad(p[AA+1], x, y, z-1), grad(p[BA+1], x-1, y, z-1)),
+                                   lerp(u, grad(p[AB+1], x, y-1, z-1), grad(p[BB+1], x-1, y-1, z-1)))));
+        }
+    };
+})();
+
+/** 
+ * TAB SWITCHING 
+ */
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
+    
+    if(tabId === 'tab2' && azCells.length === 0) {
+        // Initialize azgaar if first time visiting tab
+        runAzgaar();
+    }
+}
+
+/** 
+ * TAB 1: ALGORITHM COMPARISON LOGIC 
+ */
+function generateAll() {
+    const seedVal = document.getElementById('seed').value;
+    const rng = new RNG(seedVal);
+    const scale = parseInt(document.getElementById('scale').value);
+    const octaves = parseInt(document.getElementById('octaves').value);
+    const persistence = parseFloat(document.getElementById('persistence').value);
+    const waterLevel = parseFloat(document.getElementById('water').value);
+    const size = 512;
+
+    const container = document.getElementById('results-container');
+    container.innerHTML = '';
+
+    const algorithms = [
+        { name: 'Perlin Noise', fn: generatePerlin },
+        { name: 'Voronoi Basic', fn: generateVoronoi },
+        { name: 'Cellular Automata', fn: generateCellular },
+        { name: 'Midpoint Displacement', fn: generateMidpoint },
+        { name: 'Hybrid (Perlin+Voronoi)', fn: generateHybrid }
+    ];
+
+    // Sequential generation simulation
+    let index = 0;
+    function next() {
+        if (index >= algorithms.length) return;
+        
+        const algo = algorithms[index];
+        console.log(`Generating ${algo.name}...`);
+        const start = performance.now();
+        
+        const data = algo.fn(rng, size, scale, octaves, persistence);
+        const canvas = renderMap(data, size, waterLevel);
+        
+        const end = performance.now();
+        const time = (end - start).toFixed(2);
+        console.log(`${algo.name} completed in ${time}ms`);
+
+        const card = document.createElement('div');
+        card.className = 'map-card';
+        card.innerHTML = `
+            <h3>${algo.name}</h3>
+            <div style="position:relative; display:inline-block;">
+                <canvas width="${size}" height="${size}" style="width:100%; max-width:300px;"></canvas>
+            </div>
+            <div class="stats">Time: ${time}ms</div>
+        `;
+        card.querySelector('canvas').getContext('2d').drawImage(canvas, 0, 0);
+        container.appendChild(card);
+
+        index++;
+        setTimeout(next, 50); // Small delay to allow UI update
+    }
+    next();
+}
+
+function generatePerlin(rng, size, scale, octaves, persistence) {
+    const data = new Float32Array(size * size);
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            let noise = 0;
+            let amp = 1;
+            let freq = scale;
+            let maxVal = 0;
+            for (let o = 0; o < octaves; o++) {
+                noise += Perlin.noise(x / freq, y / freq, 0) * amp;
+                maxVal += amp;
+                amp *= persistence;
+                freq *= 2;
             }
+            data[y * size + x] = (noise / maxVal + 1) / 2; // Normalize 0-1
+        }
+    }
+    return data;
+}
 
-            next() {
-                this.seed = (this.seed * 9301 + 49297) % 233280;
-                return this.seed / 233280;
+function generateVoronoi(rng, size, scale, octaves, persistence) {
+    const pointsCount = 100;
+    const points = [];
+    for(let i=0; i<pointsCount; i++) {
+        points.push({
+            x: Math.floor(rng.next() * size),
+            y: Math.floor(rng.next() * size),
+            val: rng.next()
+        });
+    }
+    
+    const data = new Float32Array(size * size);
+    // Simple brute force voronoi for demo (slow but works without libs for 512x512)
+    // Optimization: In real app use d3-delaunay
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            let minDist = Infinity;
+            let val = 0;
+            for (let p of points) {
+                const dx = x - p.x;
+                const dy = y - p.y;
+                const dist = dx*dx + dy*dy;
+                if (dist < minDist) {
+                    minDist = dist;
+                    val = p.val;
+                }
+            }
+            data[y * size + x] = val;
+        }
+    }
+    return data;
+}
+
+function generateCellular(rng, size, scale, octaves, persistence) {
+    const grid = new Uint8Array(size * size);
+    const initProb = 0.45;
+    // Init
+    for(let i=0; i<size*size; i++) grid[i] = rng.next() < initProb ? 1 : 0;
+    
+    // Iterate
+    for(let k=0; k<4; k++) {
+        const next = new Uint8Array(size * size);
+        for(let y=1; y<size-1; y++) {
+            for(let x=1; x<size-1; x++) {
+                let neighbors = 0;
+                for(let dy=-1; dy<=1; dy++) {
+                    for(let dx=-1; dx<=1; dx++) {
+                        if(dx===0 && dy===0) continue;
+                        neighbors += grid[(y+dy)*size + (x+dx)];
+                    }
+                }
+                const idx = y*size+x;
+                if (grid[idx] === 1) next[idx] = neighbors >= 4 ? 1 : 0;
+                else next[idx] = neighbors >= 5 ? 1 : 0;
             }
         }
+        for(let i=0; i<size*size; i++) grid[i] = next[i];
+    }
+    
+    // Convert to float 0/1
+    const data = new Float32Array(size * size);
+    for(let i=0; i<size*size; i++) data[i] = grid[i];
+    return data;
+}
 
-        // Perlin Noise implementation
-        const Perlin = {
-            permutation: [],
-            
-            init(seed) {
-                const rng = new SeededRandom(seed);
-                this.permutation = [];
-                for (let i = 0; i < 256; i++) {
-                    this.permutation[i] = i;
-                }
-                // Fisher-Yates shuffle
-                for (let i = 255; i > 0; i--) {
-                    const j = Math.floor(rng.next() * (i + 1));
-                    [this.permutation[i], this.permutation[j]] = [this.permutation[j], this.permutation[i]];
-                }
-                this.permutation = [...this.permutation, ...this.permutation];
-            },
+function generateMidpoint(rng, size, scale, octaves, persistence) {
+    // Diamond Square on 513x513 then crop or just 512 power of 2 + 1
+    const dim = 513; 
+    const map = new Float32Array(dim * dim);
+    
+    // Corners
+    map[0] = rng.next();
+    map[dim-1] = rng.next();
+    map[dim*(dim-1)] = rng.next();
+    map[dim*dim-1] = rng.next();
 
-            fade(t) {
-                return t * t * t * (t * (t * 6 - 15) + 10);
-            },
-
-            lerp(a, b, t) {
-                return a + t * (b - a);
-            },
-
-            grad(hash, x, y) {
-                const h = hash & 3;
-                const u = h < 2 ? x : y;
-                const v = h < 2 ? y : x;
-                return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
-            },
-
-            noise(x, y) {
-                const X = Math.floor(x) & 255;
-                const Y = Math.floor(y) & 255;
-                x -= Math.floor(x);
-                y -= Math.floor(y);
-                const u = this.fade(x);
-                const v = this.fade(y);
-                const A = this.permutation[X] + Y;
-                const B = this.permutation[X + 1] + Y;
-                return this.lerp(
-                    this.lerp(this.grad(this.permutation[A], x, y), this.grad(this.permutation[B], x - 1, y), u),
-                    this.lerp(this.grad(this.permutation[A + 1], x, y - 1), this.grad(this.permutation[B + 1], x - 1, y - 1), u),
-                    v
-                );
-            },
-
-            octaveNoise(x, y, octaves, persistence, scale) {
-                let total = 0;
-                let frequency = 1 / scale;
-                let amplitude = 1;
-                let maxValue = 0;
-                
-                for (let i = 0; i < octaves; i++) {
-                    total += this.noise(x * frequency, y * frequency) * amplitude;
-                    maxValue += amplitude;
-                    amplitude *= persistence;
-                    frequency *= 2;
-                }
-                
-                return total / maxValue;
-            }
-        };
-
-        // Map generation algorithms
-        const Algorithms = {
-            // 1. Perlin/Simplex Noise
-            perlinNoise(width, height, seed, scale, octaves, persistence, waterLevel) {
-                Perlin.init(seed);
-                const data = [];
-                
-                for (let y = 0; y < height; y++) {
-                    for (let x = 0; x < width; x++) {
-                        const value = Perlin.octaveNoise(x, y, octaves, persistence, scale);
-                        const normalized = (value + 1) / 2; // Normalize to 0-1
-                        data.push(normalized);
-                    }
-                }
-                
-                return data;
-            },
-
-            // 2. Voronoi Diagram
-            voronoi(width, height, seed, scale, octaves, persistence, waterLevel) {
-                const rng = new SeededRandom(seed);
-                const numPoints = Math.floor((width * height) / (scale * scale));
-                const points = [];
-                
-                for (let i = 0; i < numPoints; i++) {
-                    points.push({
-                        x: rng.next() * width,
-                        y: rng.next() * height,
-                        value: rng.next()
-                    });
-                }
-                
-                const data = [];
-                for (let y = 0; y < height; y++) {
-                    for (let x = 0; x < width; x++) {
-                        let minDist = Infinity;
-                        let closestValue = 0;
-                        
-                        for (const point of points) {
-                            const dist = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
-                            if (dist < minDist) {
-                                minDist = dist;
-                                closestValue = point.value;
-                            }
-                        }
-                        
-                        data.push(closestValue);
-                    }
-                }
-                
-                return data;
-            },
-
-            // 3. Cellular Automata
-            cellularAutomata(width, height, seed, scale, octaves, persistence, waterLevel) {
-                const rng = new SeededRandom(seed);
-                const grid = [];
-                
-                // Initialize with random values
-                for (let y = 0; y < height; y++) {
-                    for (let x = 0; x < width; x++) {
-                        grid.push(rng.next() < 0.45 ? 0 : 1);
-                    }
-                }
-                
-                // Apply cellular automata rules (smoothing)
-                const iterations = 4;
-                for (let iter = 0; iter < iterations; iter++) {
-                    const newGrid = [...grid];
-                    
-                    for (let y = 1; y < height - 1; y++) {
-                        for (let x = 1; x < width - 1; x++) {
-                            let neighbors = 0;
-                            for (let dy = -1; dy <= 1; dy++) {
-                                for (let dx = -1; dx <= 1; dx++) {
-                                    if (dx !== 0 || dy !== 0) {
-                                        neighbors += grid[(y + dy) * width + (x + dx)];
-                                    }
-                                }
-                            }
-                            
-                            const idx = y * width + x;
-                            if (grid[idx] === 1) {
-                                newGrid[idx] = neighbors >= 4 ? 1 : 0;
-                            } else {
-                                newGrid[idx] = neighbors >= 5 ? 1 : 0;
-                            }
-                        }
-                    }
-                    
-                    for (let i = 0; i < grid.length; i++) {
-                        grid[i] = newGrid[i];
-                    }
-                }
-                
-                return grid.map(v => v === 1 ? 0.6 + rng.next() * 0.4 : rng.next() * 0.4);
-            },
-
-            // 4. Midpoint Displacement (Diamond-Square)
-            midpointDisplacement(width, height, seed, scale, octaves, persistence, waterLevel) {
-                const rng = new SeededRandom(seed);
-                const size = 512; // Power of 2
-                const grid = new Array(size * size).fill(0);
-                
-                console.log('[Midpoint] Starting generation with seed:', seed);
-                
-                // Initialize corners
-                grid[0] = rng.next();
-                grid[size - 1] = rng.next();
-                grid[(size - 1) * size] = rng.next();  // Fixed: was incorrectly set to grid[size - 1]
-                grid[size * (size - 1) + size - 1] = rng.next();
-                
-                console.log('[Midpoint] Corners initialized:', grid[0], grid[size - 1], grid[(size - 1) * size], grid[size * (size - 1) + size - 1]);
-                
-                let step = size - 1;
-                let roughness = 0.5;
-                let iterations = 0;
-                
-                while (step > 1) {
-                    iterations++;
-                    const half = Math.floor(step / 2);
-                    
-                    console.log(`[Midpoint] Iteration ${iterations}, step=${step}, half=${half}, roughness=${roughness}`);
-                    
-                    // Diamond step
-                    for (let y = 0; y < size - 1; y += step) {
-                        for (let x = 0; x < size - 1; x += step) {
-                            const tl = grid[y * size + x];
-                            const tr = grid[y * size + x + step];
-                            const bl = grid[(y + step) * size + x];
-                            const br = grid[(y + step) * size + x + step];
-                            
-                            const avg = (tl + tr + bl + br) / 4;
-                            const rand = (rng.next() - 0.5) * roughness;
-                            grid[(y + half) * size + (x + half)] = avg + rand;
-                        }
-                    }
-                    
-                    // Square step
-                    for (let y = 0; y < size; y += half) {
-                        for (let x = (y + half) % step; x < size; x += step) {
-                            let sum = 0;
-                            let count = 0;
-                            
-                            if (y >= half) { sum += grid[(y - half) * size + x]; count++; }
-                            if (y + half < size) { sum += grid[(y + half) * size + x]; count++; }
-                            if (x >= half) { sum += grid[y * size + (x - half)]; count++; }
-                            if (x + half < size) { sum += grid[y * size + (x + half)]; count++; }
-                            
-                            if (count > 0) {
-                                const avg = sum / count;
-                                const rand = (rng.next() - 0.5) * roughness;
-                                grid[y * size + x] = avg + rand;
-                            }
-                        }
-                    }
-                    
-                    step = half;
-                    roughness *= persistence;
-                }
-                
-                console.log('[Midpoint] Generation complete, iterations:', iterations);
-                
-                // Normalize
-                let min = Infinity, max = -Infinity;
-                for (let i = 0; i < grid.length; i++) {
-                    if (!isNaN(grid[i])) {
-                        min = Math.min(min, grid[i]);
-                        max = Math.max(max, grid[i]);
-                    }
-                }
-                
-                console.log('[Midpoint] Min:', min, 'Max:', max);
-                
-                if (max === min) {
-                    console.warn('[Midpoint] All values are identical!');
-                    return grid.map(() => 0.5);
-                }
-                
-                return grid.map(v => isNaN(v) ? 0.5 : (v - min) / (max - min));
-            },
-
-            // 5. Hybrid (Perlin + Voronoi)
-            hybrid(width, height, seed, scale, octaves, persistence, waterLevel) {
-                console.log('[Hybrid] Starting generation with seed:', seed);
-                
-                // Generate Perlin noise base
-                const perlinData = Algorithms.perlinNoise(width, height, seed, scale, octaves, persistence, waterLevel);
-                
-                // Generate Voronoi regions
-                const rng = new SeededRandom(seed + 1000);
-                const numPoints = Math.floor((width * height) / (scale * scale));
-                const points = [];
-                
-                for (let i = 0; i < numPoints; i++) {
-                    points.push({
-                        x: rng.next() * width,
-                        y: rng.next() * height,
-                        value: rng.next() * 0.3 + 0.85 // Bias toward higher values for variation
-                    });
-                }
-                
-                const data = [];
-                for (let y = 0; y < height; y++) {
-                    for (let x = 0; x < width; x++) {
-                        const idx = y * width + x;
-                        const perlinValue = perlinData[idx];
-                        
-                        // Find closest Voronoi point
-                        let minDist = Infinity;
-                        let closestValue = 1;
-                        
-                        for (const point of points) {
-                            const dist = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
-                            if (dist < minDist) {
-                                minDist = dist;
-                                closestValue = point.value;
-                            }
-                        }
-                        
-                        // Blend: use Perlin as base, multiply by Voronoi for regional variation
-                        const blended = perlinValue * closestValue;
-                        data.push(Math.min(1, Math.max(0, blended)));
-                    }
-                }
-                
-                console.log('[Hybrid] Generation complete');
-                return data;
-            }
-        };
-
-        // Color mapping for terrain
-        function getColor(value, waterLevel) {
-            if (value < waterLevel) {
-                // Deep to shallow water
-                const t = value / waterLevel;
-                return `rgb(${Math.floor(20 + 40 * t)}, ${Math.floor(60 + 80 * t)}, ${Math.floor(120 + 80 * t)})`;
-            } else if (value < waterLevel + 0.1) {
-                // Beach
-                return 'rgb(210, 190, 140)';
-            } else if (value < waterLevel + 0.3) {
-                // Grass/plains
-                const t = (value - waterLevel - 0.1) / 0.2;
-                return `rgb(${Math.floor(60 + 60 * t)}, ${Math.floor(140 - 40 * t)}, ${Math.floor(60 - 20 * t)})`;
-            } else if (value < waterLevel + 0.6) {
-                // Forest/hills
-                const t = (value - waterLevel - 0.3) / 0.3;
-                return `rgb(${Math.floor(80 - 40 * t)}, ${Math.floor(120 - 60 * t)}, ${Math.floor(60 - 30 * t)})`;
-            } else {
-                // Mountains/snow
-                const t = (value - waterLevel - 0.6) / 0.4;
-                return `rgb(${Math.floor(120 + 80 * t)}, ${Math.floor(120 + 80 * t)}, ${Math.floor(120 + 80 * t)})`;
+    let step = dim - 1;
+    let range = 1.0;
+    
+    while (step > 1) {
+        const half = Math.floor(step / 2);
+        
+        // Diamond
+        for (let y = 0; y < dim - 1; y += step) {
+            for (let x = 0; x < dim - 1; x += step) {
+                const tl = map[y * dim + x];
+                const tr = map[y * dim + x + step];
+                const bl = map[(y + step) * dim + x];
+                const br = map[(y + step) * dim + x + step];
+                const avg = (tl + tr + bl + br) / 4;
+                map[(y + half) * dim + (x + half)] = avg + (rng.next() * 2 - 1) * range;
             }
         }
-
-        // Render map to canvas
-        function renderMap(canvasId, data, width, height, waterLevel) {
-            const canvas = document.getElementById(canvasId);
-            const ctx = canvas.getContext('2d');
-            
-            const imageData = ctx.createImageData(width, height);
-            
-            for (let i = 0; i < data.length; i++) {
-                const color = getColor(data[i], waterLevel);
-                const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        
+        // Square
+        for (let y = 0; y < dim; y += half) {
+            for (let x = (y + half) % step; x < dim; x += step) {
+                let sum = 0, count = 0;
+                if (y >= half) { sum += map[(y - half) * dim + x]; count++; }
+                if (y + half < dim) { sum += map[(y + half) * dim + x]; count++; }
+                if (x >= half) { sum += map[y * dim + (x - half)]; count++; }
+                if (x + half < dim) { sum += map[y * dim + (x + half)]; count++; }
                 
-                if (match) {
-                    imageData.data[i * 4] = parseInt(match[1]);
-                    imageData.data[i * 4 + 1] = parseInt(match[2]);
-                    imageData.data[i * 4 + 2] = parseInt(match[3]);
-                    imageData.data[i * 4 + 3] = 255;
-                }
+                map[y * dim + x] = (sum / count) + (rng.next() * 2 - 1) * range;
             }
-            
-            ctx.putImageData(imageData, 0, 0);
         }
+        
+        range *= persistence;
+        step = half;
+    }
+    
+    // Crop to 512 and normalize
+    const data = new Float32Array(size * size);
+    let min = Infinity, max = -Infinity;
+    for(let y=0; y<size; y++) {
+        for(let x=0; x<size; x++) {
+            const val = map[y*dim+x];
+            if(val < min) min = val;
+            if(val > max) max = val;
+            data[y*size+x] = val;
+        }
+    }
+    // Normalize
+    const rangeVal = max - min;
+    for(let i=0; i<data.length; i++) {
+        data[i] = (data[i] - min) / rangeVal;
+    }
+    return data;
+}
 
-        // Generate all maps
-        async function generateAllMaps() {
-            const btn = document.getElementById('generateBtn');
-            const seedInput = document.getElementById('seed').value;
-            const scale = parseInt(document.getElementById('scale').value);
-            const octaves = parseInt(document.getElementById('octaves').value);
-            const persistence = parseFloat(document.getElementById('persistence').value);
-            const waterLevel = parseFloat(document.getElementById('waterLevel').value);
-            
-            const seed = seedInput ? 
-                seedInput.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 
-                Math.floor(Math.random() * 1000000);
-            
-            btn.disabled = true;
-            btn.textContent = '⏳ Generating...';
-            
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '';
-            
-            const algorithms = [
-                {
-                    name: 'Perlin Noise',
-                    description: 'Smooth, natural-looking terrain using layered noise functions. Creates organic coastlines and gradual elevation changes.',
-                    fn: Algorithms.perlinNoise
-                },
-                {
-                    name: 'Voronoi Diagram',
-                    description: 'Polygon-based regions creating distinct biomes and territories. Produces a cellular, stained-glass appearance.',
-                    fn: Algorithms.voronoi
-                },
-                {
-                    name: 'Cellular Automata',
-                    description: 'Rule-based simulation creating cave-like structures and organic patterns. Great for underground maps or archipelagos.',
-                    fn: Algorithms.cellularAutomata
-                },
-                {
-                    name: 'Midpoint Displacement',
-                    description: 'Fractal algorithm creating realistic mountain ranges and rugged terrain. Classic technique for heightmap generation.',
-                    fn: Algorithms.midpointDisplacement
-                },
-                {
-                    name: 'Hybrid (Perlin + Voronoi)',
-                    description: 'Combines smooth Perlin noise base with Voronoi region variations. Best of both worlds: natural terrain with distinct biome regions.',
-                    fn: Algorithms.hybrid
-                }
-            ];
-            
-            const width = 512;
-            const height = 512;
-            
-            for (let i = 0; i < algorithms.length; i++) {
-                const algo = algorithms[i];
-                
-                // Create card
-                const card = document.createElement('div');
-                card.className = 'map-card';
-                card.innerHTML = `
-                    <h3>${i + 1}. ${algo.name}</h3>
-                    <p class="description">${algo.description}</p>
-                    <canvas id="canvas-${i}" width="${width}" height="${height}"></canvas>
-                    <div class="stats" id="stats-${i}">Generating...</div>
+function generateHybrid(rng, size, scale, octaves, persistence) {
+    const perlin = generatePerlin(rng, size, scale, octaves, persistence);
+    const voronoi = generateVoronoi(rng, size, scale, octaves, persistence);
+    const data = new Float32Array(size * size);
+    for(let i=0; i<size*size; i++) {
+        data[i] = (perlin[i] * 0.7) + (voronoi[i] * 0.3);
+    }
+    return data;
+}
+
+function renderMap(data, size, waterLevel) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(size, size);
+    
+    for (let i = 0; i < data.length; i++) {
+        const val = data[i];
+        const idx = i * 4;
+        let r, g, b;
+        
+        if (val < waterLevel) {
+            // Water deepness
+            const depth = val / waterLevel;
+            r = 20; g = 50 + depth*50; b = 150 + depth*50;
+        } else if (val < waterLevel + 0.1) {
+            // Beach
+            r = 210; g = 200; b = 150;
+        } else if (val < 0.6) {
+            // Green
+            r = 50; g = 150 + (val-0.5)*200; b = 50;
+        } else if (val < 0.8) {
+            // Rock
+            r = 100; g = 100; b = 100;
+        } else {
+            // Snow
+            r = 255; g = 255; b = 255;
+        }
+        
+        imgData.data[idx] = r;
+        imgData.data[idx+1] = g;
+        imgData.data[idx+2] = b;
+        imgData.data[idx+3] = 255;
+    }
+    ctx.putImageData(imgData, 0, 0);
+    return canvas;
+}
+
+/** 
+ * TAB 2: AZGAAR SIMPLIFIED LOGIC 
+ */
+let azPoints = [];
+let azCells = []; // {x, y, neighbors, elevation, moisture, biome}
+let azDelaunay = null;
+let azVoronoi = null;
+let showBiomes = true;
+let canvas, ctx;
+
+// Biome Colors
+const BIOMES = {
+    DEEP_OCEAN: { color: [20, 40, 80], name: "Deep Ocean" },
+    OCEAN: { color: [30, 60, 120], name: "Ocean" },
+    BEACH: { color: [210, 200, 150], name: "Beach" },
+    LAGOON: { color: [100, 200, 200], name: "Lagoon" },
+    GRASS: { color: [50, 180, 50], name: "Grassland" },
+    FOREST: { color: [30, 100, 30], name: "Forest" },
+    DESERT: { color: [200, 180, 100], name: "Desert" },
+    MOUNTAIN: { color: [100, 100, 100], name: "Mountain" },
+    SNOW: { color: [240, 240, 250], name: "Snow" }
+};
+
+function initAzgaar() {
+    canvas = document.getElementById('azgaar-canvas');
+    ctx = canvas.getContext('2d');
+    
+    // Handle resize
+    const resize = () => {
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        if(azPoints.length > 0) drawAzgaar();
+    };
+    window.addEventListener('resize', resize);
+    resize();
+    
+    // Tooltip
+    const tooltip = document.getElementById('az-tooltip');
+    canvas.addEventListener('mousemove', e => {
+        if(azCells.length === 0) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Find cell index
+        // Simple search (optimized in real app)
+        // Using delaunay.find is faster
+        if(azDelaunay) {
+            const idx = azDelaunay.find(x, y);
+            const cell = azCells[idx];
+            if(cell) {
+                tooltip.style.display = 'block';
+                tooltip.style.left = (e.clientX + 15) + 'px';
+                tooltip.style.top = (e.clientY + 15) + 'px';
+                tooltip.innerHTML = `
+                    <strong>${cell.biome.name}</strong><br>
+                    Elevation: ${cell.elevation.toFixed(2)}<br>
+                    Moisture: ${cell.moisture.toFixed(2)}
                 `;
-                resultsDiv.appendChild(card);
-                
-                // Generate and render
-                const startTime = performance.now();
-                const data = algo.fn(width, height, seed + i, scale, octaves, persistence, waterLevel);
-                const endTime = performance.now();
-                
-                renderMap(`canvas-${i}`, data, width, height, waterLevel);
-                
-                document.getElementById(`stats-${i}`).innerHTML = `
-                    <strong>Generation time:</strong> ${(endTime - startTime).toFixed(2)}ms | 
-                    <strong>Seed:</strong> ${seed + i}
-                `;
-                
-                // Small delay between generations for visual effect
-                if (i < algorithms.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+    });
+    canvas.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+
+    // Update slider label
+    document.getElementById('az-size').addEventListener('input', (e) => {
+        document.getElementById('az-size-val').textContent = e.target.value + " points";
+    });
+}
+
+function runAzgaar() {
+    if(!ctx) initAzgaar();
+    
+    const seedStr = document.getElementById('az-seed').value;
+    const rng = new RNG(seedStr);
+    const numPoints = parseInt(document.getElementById('az-size').value);
+    const radius = parseFloat(document.getElementById('az-radius').value);
+    const noiseInt = parseFloat(document.getElementById('az-noise').value);
+    const riverCount = parseInt(document.getElementById('az-rivers').value);
+    
+    console.log("Azgaar: Generating world...", {numPoints, radius, noiseInt, riverCount});
+
+    // 1. Generate Points (with simple jitter)
+    azPoints = [];
+    const w = canvas.width;
+    const h = canvas.height;
+    const centerX = w/2, centerY = h/2;
+    const minDim = Math.min(w, h);
+    
+    for(let i=0; i<numPoints; i++) {
+        // Random point in circle
+        const angle = rng.next() * Math.PI * 2;
+        const r = Math.sqrt(rng.next()) * (minDim/2) * radius;
+        azPoints.push([centerX + Math.cos(angle)*r, centerY + Math.sin(angle)*r]);
+    }
+    
+    // 2. Lloyd's Relaxation (3 iterations)
+    for(let iter=0; iter<3; iter++) {
+        azDelaunay = d3.Delaunay.from(azPoints);
+        azVoronoi = azDelaunay.voronoi([0, 0, w, h]);
+        const newPoints = [];
+        for(let i=0; i<numPoints; i++) {
+            const cell = azVoronoi.cellPolygon(i);
+            if(!cell) { newPoints.push(azPoints[i]); continue; }
+            let cx=0, cy=0, area=0;
+            // Centroid calculation
+            for(let j=0; j<cell[0].length-1; j++) {
+                const p1 = cell[0][j];
+                const p2 = cell[0][j+1];
+                const cross = p1[0]*p2[1] - p2[0]*p1[1];
+                cx += (p1[0] + p2[0]) * cross;
+                cy += (p1[1] + p2[1]) * cross;
+                area += cross;
+            }
+            area /= 2;
+            if(Math.abs(area) < 0.001) { newPoints.push(azPoints[i]); continue; }
+            cx /= (6*area);
+            cy /= (6*area);
+            newPoints.push([cx, cy]);
+        }
+        azPoints = newPoints;
+    }
+    
+    // Rebuild Voronoi after relaxation
+    azDelaunay = d3.Delaunay.from(azPoints);
+    azVoronoi = azDelaunay.voronoi([0, 0, w, h]);
+    
+    // 3. Initialize Cells
+    azCells = azPoints.map((p, i) => ({
+        x: p[0], y: p[1],
+        elevation: 0, moisture: 0, biome: BIOMES.OCEAN,
+        neighbors: [] // indices
+    }));
+    
+    // Find neighbors via Delaunay
+    for(let i=0; i<numPoints; i++) {
+        const neighbors = azDelaunay.neighbors(i);
+        for(let n of neighbors) azCells[i].neighbors.push(n);
+    }
+    
+    // 4. Height Map (Radial + Noise)
+    for(let i=0; i<numPoints; i++) {
+        const dx = (azPoints[i][0] - centerX) / (minDim/2);
+        const dy = (azPoints[i][1] - centerY) / (minDim/2);
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        // Radial falloff (island shape)
+        let h = 1 - (dist / radius); 
+        h = Math.max(0, h);
+        h = h * h; // Sharpen
+        
+        // Add Noise
+        if(noiseInt > 0) {
+            const nx = azPoints[i][0] / 100;
+            const ny = azPoints[i][1] / 100;
+            const noise = Perlin.noise(nx, ny, 0);
+            h += noise * noiseInt * 0.5;
+        }
+        
+        azCells[i].elevation = Math.max(0, Math.min(1, h));
+    }
+    
+    // 5. Moisture Map (Precipitation)
+    // Reset moisture
+    azCells.forEach(c => c.moisture = 0);
+    // Rain sources (windward side)
+    const windAngle = rng.next() * Math.PI * 2;
+    const wx = Math.cos(windAngle), wy = Math.sin(windAngle);
+    
+    for(let i=0; i<numPoints; i++) {
+        const dx = (azPoints[i][0] - centerX) / (minDim/2);
+        const dy = (azPoints[i][1] - centerY) / (minDim/2);
+        const dot = dx*wx + dy*wy; // -1 (leeward) to 1 (windward)
+        if(dot > 0) {
+            azCells[i].moisture = dot * azCells[i].elevation; // More rain on high ground windward
+        }
+    }
+    
+    // Diffuse moisture slightly
+    for(let k=0; k<2; k++) {
+        const oldMoist = azCells.map(c => c.moisture);
+        for(let i=0; i<numPoints; i++) {
+            let sum = oldMoist[i];
+            let count = 1;
+            for(let n of azCells[i].neighbors) {
+                sum += oldMoist[n];
+                count++;
+            }
+            azCells[i].moisture = sum / count;
+        }
+    }
+    
+    // 6. Rivers (Erosion)
+    for(let r=0; r<riverCount; r++) {
+        // Start at high elevation
+        let start = -1, maxH = -1;
+        for(let i=0; i<numPoints; i++) {
+            if(azCells[i].elevation > 0.6 && azCells[i].elevation > maxH) {
+                maxH = azCells[i].elevation;
+                start = i;
+            }
+        }
+        if(start === -1) continue;
+        
+        let curr = start;
+        while(azCells[curr].elevation > 0.2) { // Stop at lowlands
+            azCells[curr].elevation -= 0.05; // Carve
+            if(azCells[curr].elevation < 0) azCells[curr].elevation = 0;
+            
+            // Flow to lowest neighbor
+            let next = -1, minH = azCells[curr].elevation;
+            for(let n of azCells[curr].neighbors) {
+                if(azCells[n].elevation < minH) {
+                    minH = azCells[n].elevation;
+                    next = n;
                 }
             }
-            
-            btn.disabled = false;
-            btn.textContent = '🚀 Generate All Maps';
+            if(next === -1 || next === curr) break;
+            curr = next;
         }
-    </script>
+    }
+    
+    // 7. Assign Biomes
+    const legendSet = new Set();
+    for(let i=0; i<numPoints; i++) {
+        const c = azCells[i];
+        const e = c.elevation;
+        const m = c.moisture;
+        
+        if(e < 0.15) c.biome = BIOMES.OCEAN;
+        else if(e < 0.2) c.biome = BIOMES.BEACH;
+        else if(e > 0.8) c.biome = BIOMES.SNOW;
+        else if(e > 0.6) c.biome = BIOMES.MOUNTAIN;
+        else {
+            if(m < 0.2) c.biome = BIOMES.DESERT;
+            else if(m < 0.5) c.biome = BIOMES.GRASS;
+            else c.biome = BIOMES.FOREST;
+        }
+        legendSet.add(c.biome.name);
+    }
+    
+    updateLegend(legendSet);
+    drawAzgaar();
+}
+
+function regenerateAzgaarTerrain() {
+    // Keep points, re-roll height/moisture
+    // Just call runAzgaar but preserve azPoints? 
+    // For simplicity, just re-run but maybe keep seed same?
+    // Let's just randomize seed slightly or re-run
+    const seedInput = document.getElementById('az-seed');
+    seedInput.value = seedInput.value + "_r";
+    runAzgaar();
+}
+
+function toggleBiomes() {
+    showBiomes = !showBiomes;
+    drawAzgaar();
+}
+
+function updateLegend(set) {
+    const container = document.getElementById('az-legend');
+    container.innerHTML = '';
+    // Order matters
+    const order = ["Deep Ocean", "Ocean", "Beach", "Lagoon", "Grassland", "Forest", "Desert", "Mountain", "Snow"];
+    
+    order.forEach(name => {
+        if(set.has(name)) {
+            // Find key
+            const key = Object.keys(BIOMES).find(k => BIOMES[k].name === name);
+            const b = BIOMES[key];
+            const div = document.createElement('div');
+            div.className = 'legend-item';
+            div.innerHTML = `<div class="color-box" style="background:rgb(${b.color.join(',')})"></div><span>${name}</span>`;
+            container.appendChild(div);
+        }
+    });
+}
+
+function drawAzgaar() {
+    if(!ctx || azCells.length === 0) return;
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    // Draw Cells
+    for(let i=0; i<azCells.length; i++) {
+        const cell = azVoronoi.cellPolygon(i);
+        if(!cell) continue;
+        
+        ctx.beginPath();
+        ctx.moveTo(cell[0][0][0], cell[0][0][1]);
+        for(let j=1; j<cell[0].length; j++) {
+            ctx.lineTo(cell[0][j][0], cell[0][j][1]);
+        }
+        ctx.closePath();
+        
+        const b = showBiomes ? cell.biome : null;
+        if(b) {
+            ctx.fillStyle = `rgb(${b.color.join(',')})`;
+        } else {
+            // Height map view
+            const e = cell.elevation;
+            const val = Math.floor(e * 255);
+            ctx.fillStyle = `rgb(${val}, ${val}, ${val})`;
+        }
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0,0.1)";
+        ctx.stroke();
+    }
+    
+    // Draw Rivers (simple lines between low points? Or just rely on carved elevation)
+    // Visualizing rivers explicitly requires tracking flow paths, skipping for brevity
+    // But we can outline coastlines
+    ctx.strokeStyle = "rgba(0,0,0,0.3)";
+    ctx.lineWidth = 1;
+    // Coastline logic omitted for speed, relies on cell borders
+}
+
+// Initial Gen for Tab 1
+window.onload = () => {
+    generateAll();
+};
+
+</script>
 </body>
 </html>
