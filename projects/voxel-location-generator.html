@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voxel Location Generator - Idea Lab</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        :root {
+            --bg-a: #07120d;
+            --bg-b: #12182f;
+            --panel: rgba(10, 18, 31, 0.9);
+            --panel-strong: rgba(10, 18, 31, 0.98);
+            --line: rgba(148, 163, 184, 0.22);
+            --text: #eef6ff;
+            --muted: #9fb0c6;
+            --accent: #86efac;
+            --accent-2: #38bdf8;
+            --warn: #fbbf24;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background:
+                radial-gradient(circle at 15% 15%, rgba(134, 239, 172, 0.12), transparent 28%),
+                radial-gradient(circle at 82% 8%, rgba(56, 189, 248, 0.14), transparent 30%),
+                radial-gradient(circle at 50% 100%, rgba(251, 191, 36, 0.08), transparent 34%),
+                linear-gradient(135deg, var(--bg-a), var(--bg-b));
+        }
+
+        .page {
+            width: min(1380px, 100%);
+            margin: 0 auto;
+            padding: 28px 20px 42px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 20px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 800;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: end;
+            margin-bottom: 22px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: clamp(2.15rem, 5vw, 4.35rem);
+            line-height: 0.95;
+            letter-spacing: -0.055em;
+        }
+
+        .subtitle {
+            max-width: 900px;
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        .badge {
+            border: 1px solid rgba(134, 239, 172, 0.35);
+            border-radius: 999px;
+            color: var(--accent);
+            background: rgba(22, 163, 74, 0.1);
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 360px minmax(0, 1fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            box-shadow: 0 24px 88px rgba(0, 0, 0, 0.32);
+            backdrop-filter: blur(18px);
+        }
+
+        .controls {
+            padding: 20px;
+            position: sticky;
+            top: 16px;
+        }
+
+        .control-block + .control-block {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid var(--line);
+        }
+
+        h2, h3 {
+            margin: 0 0 14px;
+            letter-spacing: -0.03em;
+        }
+
+        h2 { font-size: 1.12rem; }
+        h3 { font-size: 0.98rem; color: #dcfce7; }
+
+        label {
+            display: block;
+            margin: 12px 0 7px;
+            color: #cbd5e1;
+            font-size: 0.78rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        input, select, button {
+            width: 100%;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 13px;
+            font: inherit;
+        }
+
+        input, select {
+            color: var(--text);
+            background: rgba(2, 6, 23, 0.62);
+            padding: 11px 12px;
+            outline: none;
+        }
+
+        input[type="range"] { padding: 0; accent-color: var(--accent); }
+
+        button {
+            cursor: pointer;
+            color: #031109;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border: 0;
+            padding: 12px 14px;
+            font-weight: 950;
+            transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+        }
+
+        button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+        button:active:not(:disabled) { transform: translateY(0); }
+        button:disabled { cursor: not-allowed; opacity: 0.52; }
+
+        button.secondary {
+            color: var(--text);
+            background: rgba(30, 41, 59, 0.94);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .value-row {
+            display: flex;
+            justify-content: space-between;
+            color: var(--muted);
+            font-size: 0.82rem;
+            margin-top: 6px;
+        }
+
+        .stage-list {
+            display: grid;
+            gap: 9px;
+        }
+
+        .stage-step {
+            display: grid;
+            grid-template-columns: 28px 1fr;
+            gap: 10px;
+            align-items: start;
+            padding: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.48);
+        }
+
+        .stage-step.active {
+            border-color: rgba(134, 239, 172, 0.5);
+            background: rgba(22, 163, 74, 0.13);
+        }
+
+        .stage-step.done .stage-index {
+            color: #04110a;
+            background: var(--accent);
+        }
+
+        .stage-index {
+            display: grid;
+            place-items: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            color: var(--accent);
+            background: rgba(134, 239, 172, 0.11);
+            font-size: 0.78rem;
+            font-weight: 950;
+        }
+
+        .stage-name {
+            display: block;
+            margin-bottom: 3px;
+            font-weight: 900;
+        }
+
+        .stage-desc {
+            color: var(--muted);
+            font-size: 0.82rem;
+            line-height: 1.35;
+        }
+
+        .toggles {
+            display: grid;
+            gap: 8px;
+        }
+
+        .checkline {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #cbd5e1;
+            font-size: 0.92rem;
+        }
+
+        .checkline input {
+            width: auto;
+            accent-color: var(--accent);
+        }
+
+        .stage-panel { overflow: hidden; }
+
+        .canvas-wrap {
+            position: relative;
+            display: grid;
+            place-items: center;
+            min-height: 690px;
+            padding: 26px;
+            border-radius: 22px 22px 0 0;
+            background:
+                radial-gradient(circle at center, rgba(34, 197, 94, 0.12), transparent 34%),
+                radial-gradient(circle at 50% 110%, rgba(56, 189, 248, 0.12), transparent 36%),
+                #020617;
+        }
+
+        canvas {
+            width: min(100%, 820px);
+            aspect-ratio: 1 / 1;
+            border-radius: 18px;
+            background: #07111f;
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16), 0 28px 70px rgba(0, 0, 0, 0.34);
+        }
+
+        .floating-label {
+            position: absolute;
+            left: 24px;
+            top: 22px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 999px;
+            color: #dbeafe;
+            background: rgba(15, 23, 42, 0.72);
+            padding: 7px 10px;
+            font-size: 0.78rem;
+            font-weight: 850;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 1px;
+            background: var(--line);
+            border-top: 1px solid var(--line);
+        }
+
+        .metric {
+            background: rgba(15, 23, 42, 0.78);
+            padding: 14px;
+        }
+
+        .metric span {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 850;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .metric strong {
+            color: #f8fafc;
+            font-size: 1rem;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 1px;
+            background: var(--line);
+            border-top: 1px solid var(--line);
+        }
+
+        .description, .log {
+            background: rgba(15, 23, 42, 0.72);
+            padding: 18px;
+        }
+
+        .description p {
+            margin: 0;
+            color: #cbd5e1;
+            line-height: 1.62;
+        }
+
+        .log-list {
+            display: grid;
+            gap: 8px;
+            max-height: 190px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .log-entry {
+            color: #cbd5e1;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.78rem;
+            line-height: 1.35;
+        }
+
+        .log-entry strong { color: var(--accent); }
+
+        @media (max-width: 980px) {
+            header, .layout, .bottom-grid { grid-template-columns: 1fr; }
+            .controls { position: static; }
+            .canvas-wrap { min-height: 500px; padding: 14px; }
+            .info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <a class="back-link" href="../index.html">← Back to Idea Lab</a>
+        <header>
+            <div>
+                <h1>🧊 Voxel Location Generator</h1>
+                <p class="subtitle">
+                    Build a Minecraft-like miniature world one procedural layer at a time: shape the land,
+                    paint biomes, carve caves, seed decorations, then light the final rotating isometric diorama.
+                </p>
+            </div>
+            <div class="badge">5 stages · Seeded · Canvas 2D</div>
+        </header>
+
+        <section class="layout">
+            <aside class="panel controls">
+                <div class="control-block">
+                    <h2>World setup</h2>
+                    <label for="seed">Seed</label>
+                    <input id="seed" type="text" value="mossy-citadel-42" spellcheck="false">
+
+                    <label for="landscape">Landscape Type</label>
+                    <select id="landscape">
+                        <option value="forest" selected>Forest Valley</option>
+                        <option value="mesa">Desert Mesa</option>
+                        <option value="frost">Frozen Peaks</option>
+                        <option value="volcanic">Volcanic Island</option>
+                        <option value="floating">Floating Islands</option>
+                        <option value="alien">Alien Garden</option>
+                    </select>
+
+                    <label for="world-size">World Size</label>
+                    <select id="world-size">
+                        <option value="40">Fast · 40³</option>
+                        <option value="48" selected>Balanced · 48³</option>
+                        <option value="56">Detailed · 56³</option>
+                        <option value="64">Heavy · 64³</option>
+                        <option value="100">Experimental · 100³</option>
+                    </select>
+
+                    <div class="row" style="margin-top:14px;">
+                        <button id="generate">Generate</button>
+                        <button id="randomize" class="secondary">Random Seed</button>
+                    </div>
+                    <button id="next-stage" style="margin-top:10px;" disabled>Generate Next Stage</button>
+                </div>
+
+                <div class="control-block">
+                    <h2>Display</h2>
+                    <label for="rotation-speed">Rotation Speed</label>
+                    <input id="rotation-speed" type="range" min="0" max="1.8" step="0.05" value="0.45">
+                    <div class="value-row"><span>still</span><strong id="rotation-speed-value">0.45×</strong><span>fast</span></div>
+
+                    <label for="zoom">Zoom</label>
+                    <input id="zoom" type="range" min="0.75" max="1.45" step="0.05" value="1.05">
+                    <div class="value-row"><span>wide</span><strong id="zoom-value">1.05×</strong><span>close</span></div>
+                </div>
+
+                <div class="control-block">
+                    <h2>Layers</h2>
+                    <div class="toggles">
+                        <label class="checkline"><input id="auto-play" type="checkbox"> Auto-play stages</label>
+                        <label class="checkline"><input id="cutaway" type="checkbox" checked> Cutaway front corner</label>
+                        <label class="checkline"><input id="debug-colors" type="checkbox"> Biome debug colors</label>
+                        <label class="checkline"><input id="logs-toggle" type="checkbox" checked> Generation log</label>
+                    </div>
+                </div>
+
+                <div class="control-block">
+                    <h2>Pipeline</h2>
+                    <div class="stage-list" id="stage-list"></div>
+                </div>
+            </aside>
+
+            <section class="panel stage-panel">
+                <div class="canvas-wrap">
+                    <canvas id="voxel-canvas" width="820" height="820" aria-label="Rotating staged voxel location preview"></canvas>
+                    <div class="floating-label">
+                        <span class="pill" id="current-stage-pill">Stage 0 · Ready</span>
+                        <span class="pill" id="landscape-pill">Forest Valley</span>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="metric"><span>Stage</span><strong id="metric-stage">0 / 5</strong></div>
+                    <div class="metric"><span>Blocks</span><strong id="metric-blocks">—</strong></div>
+                    <div class="metric"><span>Faces</span><strong id="metric-faces">—</strong></div>
+                    <div class="metric"><span>Biomes</span><strong id="metric-biomes">—</strong></div>
+                    <div class="metric"><span>Render</span><strong id="metric-render">Canvas 2D</strong></div>
+                </div>
+
+                <div class="bottom-grid">
+                    <div class="description">
+                        <h3 id="stage-title">Ready to generate</h3>
+                        <p id="stage-description">Choose a seed and landscape type, then click Generate. Each next stage reuses the previous data and adds a new procedural layer.</p>
+                    </div>
+                    <div class="log" id="log-panel">
+                        <h3>Generation Log</h3>
+                        <div class="log-list" id="log-list"></div>
+                    </div>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <script>
+        const TAU = Math.PI * 2;
+        const BLOCK = {
+            AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, WATER: 4, SAND: 5, SNOW: 6, ICE: 7,
+            LAVA: 8, BASALT: 9, MOSS: 10, LEAVES: 11, WOOD: 12, CACTUS: 13, CRYSTAL: 14,
+            ORE: 15, ASH: 16, MYCELIUM: 17, FLOWER: 18, RUIN: 19
+        };
+
+        const BLOCK_NAMES = Object.fromEntries(Object.entries(BLOCK).map(([name, id]) => [id, name.toLowerCase()]));
+        const BIOMES = ['Plains', 'Forest', 'Desert', 'Snow', 'Mountain', 'Swamp', 'Volcanic', 'Alien'];
+        const STAGES = [
+            { name: 'Shape the Land', desc: 'Generate height fields, water level, and base grass/dirt/stone voxels.' },
+            { name: 'Paint the Biomes', desc: 'Add temperature, moisture, biome regions, beaches, snowcaps, and climate materials.' },
+            { name: 'Carve the Depths', desc: 'Use 3D density noise to carve caves, open mouths, ore seams, and fluid pockets.' },
+            { name: 'Seed the Details', desc: 'Place biome-aware trees, cacti, crystals, flowers, ruins, and lava vents.' },
+            { name: 'Light the Diorama', desc: 'Compute simple light, ambient occlusion, visible faces, and final presentation polish.' }
+        ];
+
+        const LANDSCAPES = {
+            forest: { label: 'Forest Valley', water: 0.33, height: 0.82, roughness: 0.78, temp: 0.52, wet: 0.72, cave: 0.58, tree: 0.16 },
+            mesa: { label: 'Desert Mesa', water: 0.24, height: 0.92, roughness: 1.15, temp: 0.88, wet: 0.22, cave: 0.55, tree: 0.04 },
+            frost: { label: 'Frozen Peaks', water: 0.28, height: 1.08, roughness: 1.05, temp: 0.18, wet: 0.54, cave: 0.6, tree: 0.07 },
+            volcanic: { label: 'Volcanic Island', water: 0.31, height: 1.0, roughness: 1.25, temp: 0.76, wet: 0.33, cave: 0.66, tree: 0.03 },
+            floating: { label: 'Floating Islands', water: 0.18, height: 1.18, roughness: 0.95, temp: 0.56, wet: 0.56, cave: 0.72, tree: 0.12 },
+            alien: { label: 'Alien Garden', water: 0.29, height: 0.88, roughness: 0.82, temp: 0.62, wet: 0.78, cave: 0.62, tree: 0.11 }
+        };
+
+        const PALETTE = {
+            [BLOCK.GRASS]: '#5fbf5a', [BLOCK.DIRT]: '#8a5a38', [BLOCK.STONE]: '#7b8794',
+            [BLOCK.WATER]: '#2f9ae6', [BLOCK.SAND]: '#d8b86a', [BLOCK.SNOW]: '#eef7ff',
+            [BLOCK.ICE]: '#a5f3fc', [BLOCK.LAVA]: '#f97316', [BLOCK.BASALT]: '#30313d',
+            [BLOCK.MOSS]: '#3f9f55', [BLOCK.LEAVES]: '#2f8f46', [BLOCK.WOOD]: '#7c4a2a',
+            [BLOCK.CACTUS]: '#2f9b5a', [BLOCK.CRYSTAL]: '#a78bfa', [BLOCK.ORE]: '#facc15',
+            [BLOCK.ASH]: '#585563', [BLOCK.MYCELIUM]: '#b779d6', [BLOCK.FLOWER]: '#f472b6',
+            [BLOCK.RUIN]: '#a8a29e'
+        };
+
+        const BIOME_COLORS = ['#7dd65b', '#2f9f4c', '#d9b35f', '#e5f7ff', '#8b95a1', '#4ea96c', '#db5a26', '#a855f7'];
+
+        class RNG {
+            constructor(seed) {
+                this.seed = RNG.hash(seed);
+            }
+            static hash(str) {
+                let h = 2166136261;
+                for (let i = 0; i < str.length; i++) {
+                    h ^= str.charCodeAt(i);
+                    h = Math.imul(h, 16777619);
+                }
+                return h >>> 0;
+            }
+            next() {
+                this.seed += 0x6D2B79F5;
+                let t = this.seed;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+            range(min, max) { return min + (max - min) * this.next(); }
+            chance(probability) { return this.next() < probability; }
+        }
+
+        class ValueNoise {
+            constructor(seed) {
+                this.seed = RNG.hash(seed);
+            }
+            hash(x, y, z = 0) {
+                let h = this.seed ^ Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(z, 2147483647);
+                h = Math.imul(h ^ h >>> 13, 1274126177);
+                return ((h ^ h >>> 16) >>> 0) / 4294967295;
+            }
+            fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+            lerp(a, b, t) { return a + (b - a) * t; }
+            noise2(x, y) {
+                const x0 = Math.floor(x), y0 = Math.floor(y);
+                const xf = this.fade(x - x0), yf = this.fade(y - y0);
+                const a = this.lerp(this.hash(x0, y0), this.hash(x0 + 1, y0), xf);
+                const b = this.lerp(this.hash(x0, y0 + 1), this.hash(x0 + 1, y0 + 1), xf);
+                return this.lerp(a, b, yf) * 2 - 1;
+            }
+            noise3(x, y, z) {
+                const x0 = Math.floor(x), y0 = Math.floor(y), z0 = Math.floor(z);
+                const xf = this.fade(x - x0), yf = this.fade(y - y0), zf = this.fade(z - z0);
+                const x00 = this.lerp(this.hash(x0, y0, z0), this.hash(x0 + 1, y0, z0), xf);
+                const x10 = this.lerp(this.hash(x0, y0 + 1, z0), this.hash(x0 + 1, y0 + 1, z0), xf);
+                const x01 = this.lerp(this.hash(x0, y0, z0 + 1), this.hash(x0 + 1, y0, z0 + 1), xf);
+                const x11 = this.lerp(this.hash(x0, y0 + 1, z0 + 1), this.hash(x0 + 1, y0 + 1, z0 + 1), xf);
+                const yA = this.lerp(x00, x10, yf);
+                const yB = this.lerp(x01, x11, yf);
+                return this.lerp(yA, yB, zf) * 2 - 1;
+            }
+            fbm2(x, y, octaves = 4) {
+                let sum = 0, amp = 0.55, freq = 1, norm = 0;
+                for (let i = 0; i < octaves; i++) {
+                    sum += this.noise2(x * freq, y * freq) * amp;
+                    norm += amp;
+                    amp *= 0.5;
+                    freq *= 2;
+                }
+                return sum / norm;
+            }
+            fbm3(x, y, z, octaves = 4) {
+                let sum = 0, amp = 0.55, freq = 1, norm = 0;
+                for (let i = 0; i < octaves; i++) {
+                    sum += this.noise3(x * freq, y * freq, z * freq) * amp;
+                    norm += amp;
+                    amp *= 0.5;
+                    freq *= 2;
+                }
+                return sum / norm;
+            }
+        }
+
+        const canvas = document.getElementById('voxel-canvas');
+        const ctx = canvas.getContext('2d');
+        const seedInput = document.getElementById('seed');
+        const landscapeSelect = document.getElementById('landscape');
+        const worldSizeSelect = document.getElementById('world-size');
+        const rotationSpeedInput = document.getElementById('rotation-speed');
+        const zoomInput = document.getElementById('zoom');
+        const nextStageButton = document.getElementById('next-stage');
+        const logList = document.getElementById('log-list');
+        const stageList = document.getElementById('stage-list');
+
+        const state = {
+            world: null,
+            rotation: -Math.PI / 4,
+            lastTime: 0,
+            faces: [],
+            logs: [],
+            autoTimer: null
+        };
+
+        function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+        function clamp01(value) { return clamp(value, 0, 1); }
+        function idx(world, x, y, z) { return y * world.size * world.size + z * world.size + x; }
+        function colIdx(world, x, z) { return z * world.size + x; }
+        function getBlock(world, x, y, z) {
+            if (x < 0 || y < 0 || z < 0 || x >= world.size || y >= world.size || z >= world.size) return BLOCK.AIR;
+            return world.blocks[idx(world, x, y, z)];
+        }
+        function setBlock(world, x, y, z, block) {
+            if (x < 0 || y < 0 || z < 0 || x >= world.size || y >= world.size || z >= world.size) return;
+            world.blocks[idx(world, x, y, z)] = block;
+        }
+
+        function init() {
+            renderStageList();
+            document.getElementById('generate').addEventListener('click', generateNewWorld);
+            document.getElementById('randomize').addEventListener('click', randomSeed);
+            nextStageButton.addEventListener('click', generateNextStage);
+            rotationSpeedInput.addEventListener('input', syncControls);
+            zoomInput.addEventListener('input', syncControls);
+            document.getElementById('cutaway').addEventListener('change', rebuildFacesAndMetrics);
+            document.getElementById('debug-colors').addEventListener('change', rebuildFacesAndMetrics);
+            document.getElementById('logs-toggle').addEventListener('change', syncLogVisibility);
+            document.getElementById('auto-play').addEventListener('change', syncAutoPlay);
+            landscapeSelect.addEventListener('change', () => document.getElementById('landscape-pill').textContent = LANDSCAPES[landscapeSelect.value].label);
+            syncControls();
+            drawEmptyState();
+            requestAnimationFrame(animate);
+        }
+
+        function renderStageList() {
+            stageList.innerHTML = STAGES.map((stage, index) => `
+                <div class="stage-step" data-stage="${index + 1}">
+                    <div class="stage-index">${index + 1}</div>
+                    <div><span class="stage-name">${stage.name}</span><span class="stage-desc">${stage.desc}</span></div>
+                </div>
+            `).join('');
+        }
+
+        function randomSeed() {
+            const adjectives = ['mossy', 'frozen', 'amber', 'hidden', 'violet', 'ancient', 'cloud', 'echo'];
+            const nouns = ['citadel', 'valley', 'mesa', 'cavern', 'garden', 'spire', 'delta', 'forge'];
+            const rng = new RNG(String(Date.now()));
+            seedInput.value = `${adjectives[Math.floor(rng.next() * adjectives.length)]}-${nouns[Math.floor(rng.next() * nouns.length)]}-${Math.floor(rng.range(10, 999))}`;
+            generateNewWorld();
+        }
+
+        function generateNewWorld() {
+            const requestedSize = parseInt(worldSizeSelect.value, 10);
+            const size = requestedSize;
+            const landscapeKey = landscapeSelect.value;
+            state.logs = [];
+            state.faces = [];
+            state.world = {
+                seed: seedInput.value.trim() || 'mossy-citadel-42',
+                size,
+                requestedSize,
+                landscapeKey,
+                config: LANDSCAPES[landscapeKey],
+                stage: 0,
+                waterLevel: Math.floor(size * LANDSCAPES[landscapeKey].water),
+                blocks: new Uint8Array(size * size * size),
+                height: new Uint8Array(size * size),
+                temperature: new Uint8Array(size * size),
+                moisture: new Uint8Array(size * size),
+                biome: new Uint8Array(size * size),
+                light: new Uint8Array(size * size * size),
+                decorations: []
+            };
+            log('New seeded world allocated', `${size}³ voxel grid`);
+            runStage(1);
+            nextStageButton.disabled = false;
+            syncAutoPlay();
+        }
+
+        function generateNextStage() {
+            if (!state.world) return generateNewWorld();
+            if (state.world.stage >= STAGES.length) return;
+            runStage(state.world.stage + 1);
+            if (state.world.stage >= STAGES.length) nextStageButton.disabled = true;
+            syncAutoPlay();
+        }
+
+        function runStage(stageNumber) {
+            const started = performance.now();
+            if (stageNumber === 1) shapeLand(state.world);
+            if (stageNumber === 2) paintBiomes(state.world);
+            if (stageNumber === 3) carveDepths(state.world);
+            if (stageNumber === 4) seedDetails(state.world);
+            if (stageNumber === 5) lightDiorama(state.world);
+            state.world.stage = stageNumber;
+            rebuildFacesAndMetrics();
+            log(`Stage ${stageNumber}: ${STAGES[stageNumber - 1].name}`, `completed in ${(performance.now() - started).toFixed(1)}ms`);
+            updateUi();
+        }
+
+        function shapeLand(world) {
+            const noise = new ValueNoise(`${world.seed}:stage-1:terrain:${world.landscapeKey}`);
+            const center = (world.size - 1) / 2;
+            let solids = 0;
+            world.blocks.fill(BLOCK.AIR);
+            for (let z = 0; z < world.size; z++) {
+                for (let x = 0; x < world.size; x++) {
+                    const nx = x / world.size - 0.5;
+                    const nz = z / world.size - 0.5;
+                    const dist = Math.hypot(x - center, z - center) / center;
+                    const continent = noise.fbm2(nx * 2.1 + 31, nz * 2.1 - 19, 5);
+                    const hills = noise.fbm2(nx * 7.2 - 4, nz * 7.2 + 8, 4);
+                    const ridges = 1 - Math.abs(noise.fbm2(nx * 12.5, nz * 12.5, 3));
+                    const island = world.landscapeKey === 'floating' ? 0.72 : clamp01(1 - Math.pow(dist, 2.35));
+                    let height = world.size * 0.2 + island * world.size * 0.42;
+                    height += continent * world.size * 0.16 * world.config.height;
+                    height += hills * world.size * 0.09 * world.config.roughness;
+                    height += ridges * world.size * 0.08 * world.config.roughness;
+                    if (world.landscapeKey !== 'floating') height -= Math.max(0, dist - 0.78) * world.size * 0.34;
+                    if (world.landscapeKey === 'mesa') height = Math.round(height / 3) * 3;
+                    if (world.landscapeKey === 'volcanic') height += Math.max(0, 1 - dist * 1.7) * world.size * 0.16;
+                    const h = clamp(Math.floor(height), 4, world.size - 6);
+                    world.height[colIdx(world, x, z)] = h;
+                    for (let y = 0; y <= h; y++) {
+                        let block = BLOCK.STONE;
+                        if (y > h - 1) block = h <= world.waterLevel + 1 ? BLOCK.SAND : BLOCK.GRASS;
+                        else if (y > h - 5) block = BLOCK.DIRT;
+                        setBlock(world, x, y, z, block);
+                        solids++;
+                    }
+                    for (let y = h + 1; y <= world.waterLevel; y++) {
+                        setBlock(world, x, y, z, BLOCK.WATER);
+                    }
+                }
+            }
+            log('Terrain skeleton', `${solids.toLocaleString()} solid terrain voxels, water level ${world.waterLevel}`);
+        }
+
+        function paintBiomes(world) {
+            const tempNoise = new ValueNoise(`${world.seed}:stage-2:temperature`);
+            const wetNoise = new ValueNoise(`${world.seed}:stage-2:moisture`);
+            const biomeSet = new Set();
+            let repainted = 0;
+            for (let z = 0; z < world.size; z++) {
+                for (let x = 0; x < world.size; x++) {
+                    const c = colIdx(world, x, z);
+                    const h = world.height[c];
+                    const elev = h / world.size;
+                    const latitude = Math.abs(z / (world.size - 1) - 0.5) * 0.7;
+                    const temp = clamp01(world.config.temp + tempNoise.fbm2(x / 32, z / 32, 4) * 0.28 - elev * 0.42 - latitude);
+                    const moist = clamp01(world.config.wet + wetNoise.fbm2(x / 24 + 5, z / 24 - 7, 4) * 0.32 + (h < world.waterLevel + 3 ? 0.25 : 0) - elev * 0.1);
+                    world.temperature[c] = Math.floor(temp * 255);
+                    world.moisture[c] = Math.floor(moist * 255);
+                    let biome = 0;
+                    if (world.landscapeKey === 'volcanic' && elev > 0.42) biome = 6;
+                    else if (world.landscapeKey === 'alien') biome = 7;
+                    else if (temp < 0.24 || elev > 0.72) biome = 3;
+                    else if (elev > 0.62) biome = 4;
+                    else if (temp > 0.68 && moist < 0.38) biome = 2;
+                    else if (moist > 0.75 && elev < 0.46) biome = 5;
+                    else if (moist > 0.52) biome = 1;
+                    world.biome[c] = biome;
+                    biomeSet.add(BIOMES[biome]);
+                    const surface = surfaceBlockFor(world, biome, h);
+                    if (getBlock(world, x, h, z) !== BLOCK.AIR) {
+                        setBlock(world, x, h, z, surface);
+                        repainted++;
+                    }
+                    for (let y = h - 1; y >= Math.max(0, h - 4); y--) {
+                        if (surface === BLOCK.SAND) setBlock(world, x, y, z, BLOCK.SAND);
+                        if (surface === BLOCK.SNOW) setBlock(world, x, y, z, BLOCK.STONE);
+                        if (surface === BLOCK.BASALT || surface === BLOCK.ASH) setBlock(world, x, y, z, BLOCK.BASALT);
+                        if (surface === BLOCK.MYCELIUM) setBlock(world, x, y, z, BLOCK.MOSS);
+                    }
+                }
+            }
+            log('Climate and biomes', `${biomeSet.size} biomes active, ${repainted.toLocaleString()} surface voxels repainted`);
+        }
+
+        function surfaceBlockFor(world, biome, h) {
+            if (h <= world.waterLevel + 1) return biome === 3 ? BLOCK.ICE : BLOCK.SAND;
+            if (biome === 2) return BLOCK.SAND;
+            if (biome === 3) return BLOCK.SNOW;
+            if (biome === 4) return BLOCK.STONE;
+            if (biome === 5) return BLOCK.MOSS;
+            if (biome === 6) return h > world.size * 0.66 ? BLOCK.ASH : BLOCK.BASALT;
+            if (biome === 7) return BLOCK.MYCELIUM;
+            return BLOCK.GRASS;
+        }
+
+        function carveDepths(world) {
+            const caveNoise = new ValueNoise(`${world.seed}:stage-3:caves`);
+            const oreNoise = new ValueNoise(`${world.seed}:stage-3:ores`);
+            let carved = 0, ores = 0, fluids = 0;
+            for (let z = 1; z < world.size - 1; z++) {
+                for (let x = 1; x < world.size - 1; x++) {
+                    const h = world.height[colIdx(world, x, z)];
+                    for (let y = 3; y < h - 2; y++) {
+                        const large = caveNoise.fbm3(x / 18, y / 12, z / 18, 4);
+                        const tunnel = 1 - Math.abs(caveNoise.fbm3(x / 8 + 17, y / 9 - 3, z / 8, 3));
+                        const entrance = y > h - 7 && caveNoise.fbm2(x / 10, z / 10, 3) > 0.34;
+                        const cave = large * 0.68 + tunnel * 0.42 + (entrance ? 0.28 : 0);
+                        if (cave > world.config.cave && y < h - 1) {
+                            setBlock(world, x, y, z, BLOCK.AIR);
+                            carved++;
+                            if (y < world.waterLevel - 2 && cave > world.config.cave + 0.19) {
+                                setBlock(world, x, y, z, world.landscapeKey === 'volcanic' && y < world.size * 0.22 ? BLOCK.LAVA : BLOCK.WATER);
+                                fluids++;
+                            }
+                        } else if (y < h - 6 && getBlock(world, x, y, z) === BLOCK.STONE && oreNoise.fbm3(x / 7, y / 7, z / 7, 3) > 0.58) {
+                            setBlock(world, x, y, z, BLOCK.ORE);
+                            ores++;
+                        }
+                    }
+                }
+            }
+            log('Caves and underground', `${carved.toLocaleString()} voxels carved, ${ores.toLocaleString()} ore blocks, ${fluids.toLocaleString()} fluid pockets`);
+        }
+
+        function seedDetails(world) {
+            const rng = new RNG(`${world.seed}:stage-4:details:${world.landscapeKey}`);
+            let details = 0;
+            for (let z = 2; z < world.size - 2; z++) {
+                for (let x = 2; x < world.size - 2; x++) {
+                    const c = colIdx(world, x, z);
+                    const h = world.height[c];
+                    const biome = world.biome[c];
+                    if (h <= world.waterLevel || getBlock(world, x, h + 1, z) !== BLOCK.AIR) continue;
+                    const slope = Math.abs(world.height[colIdx(world, x + 1, z)] - world.height[colIdx(world, x - 1, z)]) + Math.abs(world.height[colIdx(world, x, z + 1)] - world.height[colIdx(world, x, z - 1)]);
+                    if (slope > 6) continue;
+                    if ((biome === 1 || biome === 5 || biome === 7) && rng.chance(world.config.tree)) {
+                        placeTree(world, x, h + 1, z, biome);
+                        details++;
+                    } else if (biome === 2 && rng.chance(0.055)) {
+                        placeColumn(world, x, h + 1, z, BLOCK.CACTUS, Math.floor(rng.range(2, 5)));
+                        details++;
+                    } else if (biome === 3 && rng.chance(0.04)) {
+                        placeColumn(world, x, h + 1, z, BLOCK.ICE, Math.floor(rng.range(1, 4)));
+                        details++;
+                    } else if (biome === 6 && rng.chance(0.045)) {
+                        placeColumn(world, x, h + 1, z, BLOCK.LAVA, 1);
+                        details++;
+                    } else if (biome === 7 && rng.chance(0.07)) {
+                        placeColumn(world, x, h + 1, z, BLOCK.CRYSTAL, Math.floor(rng.range(2, 6)));
+                        details++;
+                    } else if (rng.chance(0.015)) {
+                        setBlock(world, x, h + 1, z, BLOCK.FLOWER);
+                        details++;
+                    }
+                }
+            }
+            placeRuin(world, rng);
+            log('Decorations and landmarks', `${details.toLocaleString()} details placed plus one seeded ruin marker`);
+        }
+
+        function placeColumn(world, x, y, z, block, height) {
+            for (let i = 0; i < height; i++) setBlock(world, x, y + i, z, block);
+        }
+
+        function placeTree(world, x, y, z, biome) {
+            const trunkHeight = biome === 7 ? 3 : 4;
+            placeColumn(world, x, y, z, BLOCK.WOOD, trunkHeight);
+            const leafBlock = biome === 7 ? BLOCK.CRYSTAL : BLOCK.LEAVES;
+            for (let dy = trunkHeight - 2; dy <= trunkHeight + 1; dy++) {
+                const radius = dy === trunkHeight + 1 ? 1 : 2;
+                for (let dz = -radius; dz <= radius; dz++) {
+                    for (let dx = -radius; dx <= radius; dx++) {
+                        if (Math.abs(dx) + Math.abs(dz) <= radius + 1) setBlock(world, x + dx, y + dy, z + dz, leafBlock);
+                    }
+                }
+            }
+        }
+
+        function placeRuin(world, rng) {
+            for (let attempts = 0; attempts < 80; attempts++) {
+                const x = Math.floor(rng.range(8, world.size - 8));
+                const z = Math.floor(rng.range(8, world.size - 8));
+                const h = world.height[colIdx(world, x, z)];
+                if (h <= world.waterLevel + 2) continue;
+                for (let dz = -2; dz <= 2; dz++) {
+                    for (let dx = -2; dx <= 2; dx++) {
+                        if (Math.abs(dx) === 2 || Math.abs(dz) === 2 || rng.chance(0.45)) setBlock(world, x + dx, h + 1, z + dz, BLOCK.RUIN);
+                    }
+                }
+                return;
+            }
+        }
+
+        function lightDiorama(world) {
+            let lit = 0;
+            world.light.fill(0);
+            for (let z = 0; z < world.size; z++) {
+                for (let x = 0; x < world.size; x++) {
+                    let sunlight = 255;
+                    for (let y = world.size - 1; y >= 0; y--) {
+                        const block = getBlock(world, x, y, z);
+                        if (block !== BLOCK.AIR) {
+                            world.light[idx(world, x, y, z)] = sunlight;
+                            sunlight = Math.max(45, sunlight - (block === BLOCK.WATER ? 18 : 48));
+                            lit++;
+                        }
+                    }
+                }
+            }
+            log('Lighting and polish', `${lit.toLocaleString()} non-air voxels received simple top-down light`);
+        }
+
+        function rebuildFacesAndMetrics() {
+            if (!state.world) return;
+            state.faces = buildVisibleFaces(state.world);
+            updateUi();
+        }
+
+        function buildVisibleFaces(world) {
+            const faces = [];
+            const cutaway = document.getElementById('cutaway').checked;
+            const cut = Math.floor(world.size * 0.28);
+            const directions = [
+                { name: 'top', normal: [0, 1, 0], shade: 1.18, corners: [[0,1,0],[1,1,0],[1,1,1],[0,1,1]] },
+                { name: 'east', normal: [1, 0, 0], shade: 0.82, corners: [[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },
+                { name: 'west', normal: [-1, 0, 0], shade: 0.72, corners: [[0,0,1],[0,1,1],[0,1,0],[0,0,0]] },
+                { name: 'south', normal: [0, 0, 1], shade: 0.92, corners: [[1,0,1],[1,1,1],[0,1,1],[0,0,1]] },
+                { name: 'north', normal: [0, 0, -1], shade: 0.66, corners: [[0,0,0],[0,1,0],[1,1,0],[1,0,0]] }
+            ];
+            for (let y = 0; y < world.size; y++) {
+                for (let z = 0; z < world.size; z++) {
+                    for (let x = 0; x < world.size; x++) {
+                        if (cutaway && x < cut && z < cut && y < world.size * 0.72) continue;
+                        const block = getBlock(world, x, y, z);
+                        if (block === BLOCK.AIR) continue;
+                        for (const dir of directions) {
+                            const nx = x + dir.normal[0], ny = y + dir.normal[1], nz = z + dir.normal[2];
+                            const neighbor = getBlock(world, nx, ny, nz);
+                            if (neighbor === BLOCK.AIR || (block !== BLOCK.WATER && neighbor === BLOCK.WATER)) {
+                                faces.push({ x, y, z, block, biome: world.biome[colIdx(world, x, z)], name: dir.name, shade: dir.shade, corners: dir.corners });
+                            }
+                        }
+                    }
+                }
+            }
+            const maxStoredFaces = world.size >= 100 ? 24000 : world.size >= 64 ? 32000 : 42000;
+            if (faces.length <= maxStoredFaces) return faces;
+            const stride = Math.ceil(faces.length / maxStoredFaces);
+            return faces.filter((_, index) => index % stride === 0);
+        }
+
+        function animate(time) {
+            const dt = state.lastTime ? (time - state.lastTime) / 1000 : 0;
+            state.lastTime = time;
+            state.rotation += dt * parseFloat(rotationSpeedInput.value) * 0.42;
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        function projectPoint(x, y, z, world) {
+            const cx = world.size / 2;
+            const cz = world.size / 2;
+            const cos = Math.cos(state.rotation);
+            const sin = Math.sin(state.rotation);
+            const rx = (x - cx) * cos - (z - cz) * sin;
+            const rz = (x - cx) * sin + (z - cz) * cos;
+            const scale = (canvas.width / (world.size * 2.2)) * parseFloat(zoomInput.value);
+            return {
+                x: canvas.width / 2 + (rx - rz) * scale,
+                y: canvas.height * 0.62 + (rx + rz) * scale * 0.48 - y * scale * 0.86,
+                depth: rx + rz + y * 0.08
+            };
+        }
+
+        function draw() {
+            if (!state.world) return drawEmptyState();
+            const world = state.world;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackdrop();
+            const projected = state.faces.map(face => {
+                const points = face.corners.map(([dx, dy, dz]) => projectPoint(face.x + dx, face.y + dy, face.z + dz, world));
+                const center = projectPoint(face.x + 0.5, face.y + 0.5, face.z + 0.5, world);
+                return { ...face, points, depth: center.depth + face.y * 0.02 };
+            }).sort((a, b) => a.depth - b.depth || a.y - b.y);
+
+            for (const face of projected) drawFace(face, world);
+        }
+
+        function drawBackdrop() {
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#081426');
+            gradient.addColorStop(1, '#020617');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.globalAlpha = 0.22;
+            ctx.fillStyle = '#86efac';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, canvas.height * 0.78, canvas.width * 0.34, canvas.height * 0.06, 0, 0, TAU);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawEmptyState() {
+            drawBackdrop();
+            ctx.fillStyle = '#dbeafe';
+            ctx.textAlign = 'center';
+            ctx.font = '900 34px system-ui, sans-serif';
+            ctx.fillText('Voxel pipeline ready', canvas.width / 2, canvas.height / 2 - 16);
+            ctx.fillStyle = '#9fb0c6';
+            ctx.font = '500 18px system-ui, sans-serif';
+            ctx.fillText('Click Generate to shape the first terrain skeleton.', canvas.width / 2, canvas.height / 2 + 24);
+        }
+
+        function drawFace(face, world) {
+            const base = document.getElementById('debug-colors').checked ? BIOME_COLORS[face.biome] : PALETTE[face.block] || '#ffffff';
+            const light = world.stage >= 5 ? (world.light[idx(world, face.x, face.y, face.z)] || 120) / 255 : 0.86;
+            const ao = ambientOcclusion(world, face);
+            const color = shadeColor(base, face.shade * (0.65 + light * 0.42) * ao);
+            ctx.beginPath();
+            ctx.moveTo(face.points[0].x, face.points[0].y);
+            for (let i = 1; i < face.points.length; i++) ctx.lineTo(face.points[i].x, face.points[i].y);
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.globalAlpha = face.block === BLOCK.WATER ? 0.72 : 1;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = 'rgba(2, 6, 23, 0.22)';
+            ctx.lineWidth = 0.55;
+            ctx.stroke();
+            if (face.block === BLOCK.LAVA || face.block === BLOCK.CRYSTAL || face.block === BLOCK.ORE) {
+                ctx.save();
+                ctx.globalAlpha = 0.28;
+                ctx.fillStyle = face.block === BLOCK.LAVA ? '#fed7aa' : '#f5d0fe';
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function ambientOcclusion(world, face) {
+            if (world.stage < 5) return 1;
+            const neighbors = [getBlock(world, face.x + 1, face.y, face.z), getBlock(world, face.x - 1, face.y, face.z), getBlock(world, face.x, face.y, face.z + 1), getBlock(world, face.x, face.y, face.z - 1)].filter(Boolean).length;
+            return 1 - neighbors * 0.035;
+        }
+
+        function shadeColor(hex, factor) {
+            const clean = hex.replace('#', '');
+            const r = clamp(Math.round(parseInt(clean.slice(0, 2), 16) * factor), 0, 255);
+            const g = clamp(Math.round(parseInt(clean.slice(2, 4), 16) * factor), 0, 255);
+            const b = clamp(Math.round(parseInt(clean.slice(4, 6), 16) * factor), 0, 255);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function updateUi() {
+            const world = state.world;
+            const stage = world ? world.stage : 0;
+            document.querySelectorAll('.stage-step').forEach((el, index) => {
+                const number = index + 1;
+                el.classList.toggle('done', number <= stage);
+                el.classList.toggle('active', number === stage);
+            });
+            document.getElementById('metric-stage').textContent = `${stage} / ${STAGES.length}`;
+            document.getElementById('metric-blocks').textContent = world ? countBlocks(world).toLocaleString() : '—';
+            document.getElementById('metric-faces').textContent = world ? state.faces.length.toLocaleString() : '—';
+            document.getElementById('metric-biomes').textContent = world ? countBiomes(world) : '—';
+            document.getElementById('current-stage-pill').textContent = stage ? `Stage ${stage} · ${STAGES[stage - 1].name}` : 'Stage 0 · Ready';
+            document.getElementById('landscape-pill').textContent = world ? LANDSCAPES[world.landscapeKey].label : LANDSCAPES[landscapeSelect.value].label;
+            document.getElementById('stage-title').textContent = stage ? STAGES[stage - 1].name : 'Ready to generate';
+            document.getElementById('stage-description').textContent = stage ? STAGES[stage - 1].desc : 'Choose a seed and landscape type, then click Generate. Each next stage reuses the previous data and adds a new procedural layer.';
+            nextStageButton.textContent = stage >= STAGES.length ? 'All Stages Complete' : `Generate Next Stage${stage ? ` (${stage + 1})` : ''}`;
+            nextStageButton.disabled = !world || stage >= STAGES.length;
+            renderLogs();
+        }
+
+        function countBlocks(world) {
+            let count = 0;
+            for (const block of world.blocks) if (block !== BLOCK.AIR) count++;
+            return count;
+        }
+
+        function countBiomes(world) {
+            if (world.stage < 2) return '—';
+            const set = new Set();
+            for (const biome of world.biome) set.add(BIOMES[biome]);
+            return set.size.toString();
+        }
+
+        function log(title, detail) {
+            state.logs.unshift({ title, detail });
+            renderLogs();
+        }
+
+        function renderLogs() {
+            logList.innerHTML = state.logs.map(entry => `<div class="log-entry"><strong>${entry.title}</strong><br>${entry.detail}</div>`).join('');
+        }
+
+        function syncControls() {
+            document.getElementById('rotation-speed-value').textContent = `${parseFloat(rotationSpeedInput.value).toFixed(2)}×`;
+            document.getElementById('zoom-value').textContent = `${parseFloat(zoomInput.value).toFixed(2)}×`;
+        }
+
+        function syncLogVisibility() {
+            document.getElementById('log-panel').style.display = document.getElementById('logs-toggle').checked ? 'block' : 'none';
+        }
+
+        function syncAutoPlay() {
+            clearTimeout(state.autoTimer);
+            state.autoTimer = null;
+            if (!document.getElementById('auto-play').checked || !state.world || state.world.stage >= STAGES.length) return;
+            state.autoTimer = setTimeout(generateNextStage, 1050);
+        }
+
+        init();
+    </script>
+</body>
+</html>
