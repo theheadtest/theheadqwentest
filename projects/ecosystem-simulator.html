@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro Ecosystem Simulator - Idea Lab</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        :root {
+            --bg-a: #07130f;
+            --bg-b: #172033;
+            --panel: rgba(9, 18, 26, 0.88);
+            --panel-strong: rgba(9, 18, 26, 0.97);
+            --line: rgba(148, 163, 184, 0.22);
+            --text: #ecfdf5;
+            --muted: #a7b8ad;
+            --accent: #5eead4;
+            --accent-2: #facc15;
+            --danger: #fb7185;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background:
+                radial-gradient(circle at 12% 18%, rgba(94, 234, 212, 0.13), transparent 28%),
+                radial-gradient(circle at 78% 10%, rgba(250, 204, 21, 0.12), transparent 30%),
+                radial-gradient(circle at 52% 100%, rgba(251, 113, 133, 0.08), transparent 34%),
+                linear-gradient(135deg, var(--bg-a), var(--bg-b));
+        }
+
+        .page {
+            width: min(1340px, 100%);
+            margin: 0 auto;
+            padding: 28px 20px 42px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 20px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 800;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: end;
+            margin-bottom: 22px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: clamp(2.15rem, 5vw, 4.35rem);
+            line-height: 0.95;
+            letter-spacing: -0.055em;
+        }
+
+        .subtitle {
+            max-width: 900px;
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        .badge {
+            border: 1px solid rgba(94, 234, 212, 0.35);
+            border-radius: 999px;
+            color: var(--accent);
+            background: rgba(20, 184, 166, 0.1);
+            padding: 10px 14px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 330px;
+            gap: 18px;
+            align-items: start;
+        }
+
+        .card {
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            background: var(--panel);
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(14px);
+        }
+
+        .stage {
+            overflow: hidden;
+            min-height: 660px;
+        }
+
+        .stage-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .stat-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .pill {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 8px 11px;
+            background: rgba(15, 23, 42, 0.45);
+        }
+
+        .pill strong { color: var(--text); }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 0.66;
+            image-rendering: pixelated;
+            cursor: crosshair;
+            background: #07120d;
+        }
+
+        .sidebar {
+            padding: 18px;
+            position: sticky;
+            top: 18px;
+        }
+
+        h2, h3 { margin: 0; }
+
+        .section {
+            padding: 16px 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .section:first-child { padding-top: 0; }
+        .section:last-child { border-bottom: 0; padding-bottom: 0; }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--muted);
+            font-size: 0.87rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        input, select, button {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            color: var(--text);
+            background: rgba(15, 23, 42, 0.72);
+            padding: 11px 12px;
+            font: inherit;
+        }
+
+        input[type="range"] { padding: 0; accent-color: var(--accent); }
+
+        button {
+            cursor: pointer;
+            font-weight: 900;
+            transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(94, 234, 212, 0.75);
+            background: rgba(20, 184, 166, 0.18);
+        }
+
+        .primary {
+            color: #05201b;
+            background: linear-gradient(135deg, var(--accent), #86efac);
+            border: 0;
+        }
+
+        .primary:hover { background: linear-gradient(135deg, #99f6e4, #bbf7d0); }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .brushes {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .brush {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+        }
+
+        .brush.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(94, 234, 212, 0.18) inset;
+        }
+
+        .legend {
+            display: grid;
+            gap: 9px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        .legend-item {
+            display: grid;
+            grid-template-columns: 18px 1fr;
+            gap: 9px;
+            align-items: center;
+        }
+
+        .swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+
+        .note {
+            color: var(--muted);
+            line-height: 1.6;
+            margin: 10px 0 0;
+            font-size: 0.93rem;
+        }
+
+        @media (max-width: 980px) {
+            header, .layout { grid-template-columns: 1fr; }
+            .badge { justify-self: start; }
+            .sidebar { position: static; }
+            .stage { min-height: auto; }
+        }
+
+        @media (max-width: 560px) {
+            .page { padding: 20px 12px 30px; }
+            .stage-top { align-items: flex-start; flex-direction: column; }
+            .grid-2, .brushes { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <a href="../index.html" class="back-link">← Back to Idea Lab</a>
+        <header>
+            <div>
+                <h1>Micro Ecosystem Simulator</h1>
+                <p class="subtitle">
+                    Paint a tiny living world where water feeds grass, grass becomes forest, herbivores graze,
+                    predators hunt, and lightning turns dense habitats into temporary firebreaks. It is a compact
+                    cellular-automata sandbox for testing emergent balancing rules in one HTML file.
+                </p>
+            </div>
+            <div class="badge">🌿 Project #4 candidate</div>
+        </header>
+
+        <section class="layout">
+            <div class="card stage">
+                <div class="stage-top">
+                    <div>
+                        <h2>Living map</h2>
+                        <p class="note">Click or drag on the canvas to paint with the active brush.</p>
+                    </div>
+                    <div class="stat-row" id="stats"></div>
+                </div>
+                <canvas id="world" width="180" height="120" aria-label="Animated micro ecosystem grid"></canvas>
+            </div>
+
+            <aside class="card sidebar">
+                <div class="section">
+                    <h3>Simulation controls</h3>
+                    <div class="grid-2">
+                        <button id="toggle" class="primary">Pause</button>
+                        <button id="step">Step once</button>
+                    </div>
+                    <div class="grid-2">
+                        <button id="regenerate">Regenerate</button>
+                        <button id="randomSeed">Random seed</button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <label for="seed">World seed</label>
+                    <input id="seed" value="moss-7341" autocomplete="off">
+                    <p class="note">Seeds make the starting world reproducible, so you can compare rule changes later.</p>
+                </div>
+
+                <div class="section">
+                    <label for="speed">Simulation speed</label>
+                    <input id="speed" type="range" min="1" max="10" value="5">
+                    <p class="note"><span id="speedLabel">5</span> ticks per animation beat.</p>
+                </div>
+
+                <div class="section">
+                    <label>Brushes</label>
+                    <div class="brushes" id="brushes"></div>
+                    <p class="note">Try drawing a river, adding rabbits near grass, then dropping a few foxes.</p>
+                </div>
+
+                <div class="section">
+                    <label>Legend</label>
+                    <div class="legend">
+                        <div class="legend-item"><span class="swatch" style="background:#0f2a1e"></span>Soil stores moisture and can regrow grass.</div>
+                        <div class="legend-item"><span class="swatch" style="background:#34d399"></span>Grass spreads near water and feeds herbivores.</div>
+                        <div class="legend-item"><span class="swatch" style="background:#15803d"></span>Forest expands slowly but can catch fire.</div>
+                        <div class="legend-item"><span class="swatch" style="background:#2563eb"></span>Water boosts nearby plant growth.</div>
+                        <div class="legend-item"><span class="swatch" style="background:#f8fafc"></span>Rabbits search for plants and multiply quickly.</div>
+                        <div class="legend-item"><span class="swatch" style="background:#f97316"></span>Foxes chase rabbits and starve without food.</div>
+                        <div class="legend-item"><span class="swatch" style="background:#ef4444"></span>Fire burns forests, then leaves fertile ash.</div>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('world');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        const size = W * H;
+
+        const TILE = {
+            SOIL: 0,
+            GRASS: 1,
+            FOREST: 2,
+            WATER: 3,
+            RABBIT: 4,
+            FOX: 5,
+            FIRE: 6,
+            ASH: 7
+        };
+
+        const colors = {
+            [TILE.SOIL]: '#0f2a1e',
+            [TILE.GRASS]: '#34d399',
+            [TILE.FOREST]: '#15803d',
+            [TILE.WATER]: '#2563eb',
+            [TILE.RABBIT]: '#f8fafc',
+            [TILE.FOX]: '#f97316',
+            [TILE.FIRE]: '#ef4444',
+            [TILE.ASH]: '#57534e'
+        };
+
+        const brushConfig = [
+            ['Grass', '🌱', TILE.GRASS],
+            ['Forest', '🌲', TILE.FOREST],
+            ['Water', '💧', TILE.WATER],
+            ['Rabbit', '🐇', TILE.RABBIT],
+            ['Fox', '🦊', TILE.FOX],
+            ['Fire', '🔥', TILE.FIRE],
+            ['Soil', '🟫', TILE.SOIL],
+            ['Ash', '◼', TILE.ASH]
+        ];
+
+        let world = new Uint8Array(size);
+        let energy = new Uint8Array(size);
+        let age = new Uint8Array(size);
+        let rng = mulberry32(1);
+        let running = true;
+        let tick = 0;
+        let brush = TILE.GRASS;
+        let isPainting = false;
+
+        const seedInput = document.getElementById('seed');
+        const stats = document.getElementById('stats');
+        const speed = document.getElementById('speed');
+        const speedLabel = document.getElementById('speedLabel');
+        const toggle = document.getElementById('toggle');
+        const brushRoot = document.getElementById('brushes');
+
+        function hashString(str) {
+            let h = 2166136261;
+            for (let i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            return h >>> 0;
+        }
+
+        function mulberry32(seed) {
+            return function() {
+                let t = seed += 0x6D2B79F5;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+
+        function idx(x, y) { return y * W + x; }
+        function inBounds(x, y) { return x >= 0 && x < W && y >= 0 && y < H; }
+
+        function noise(x, y) {
+            const n = Math.sin(x * 12.9898 + y * 78.233 + hashString(seedInput.value) * 0.00001) * 43758.5453;
+            return n - Math.floor(n);
+        }
+
+        function smoothNoise(x, y) {
+            let total = 0;
+            let weight = 0;
+            for (let oy = -2; oy <= 2; oy++) {
+                for (let ox = -2; ox <= 2; ox++) {
+                    const w = 1 / (1 + Math.hypot(ox, oy));
+                    total += noise(Math.floor(x / 5) + ox, Math.floor(y / 5) + oy) * w;
+                    weight += w;
+                }
+            }
+            return total / weight;
+        }
+
+        function regenerate() {
+            rng = mulberry32(hashString(seedInput.value || 'ecosystem'));
+            world.fill(TILE.SOIL);
+            energy.fill(0);
+            age.fill(0);
+            tick = 0;
+
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    const i = idx(x, y);
+                    const n = smoothNoise(x, y);
+                    const river = Math.abs(y - H * 0.5 - Math.sin(x * 0.085) * 16 - Math.sin(x * 0.025) * 9);
+                    if (river < 2.2 || n < 0.24) world[i] = TILE.WATER;
+                    else if (n > 0.72) world[i] = TILE.FOREST;
+                    else if (n > 0.42) world[i] = TILE.GRASS;
+                    else if (n > 0.37) world[i] = TILE.ASH;
+                }
+            }
+
+            sprinkle(TILE.RABBIT, 75, 18);
+            sprinkle(TILE.FOX, 18, 28);
+            render();
+            updateStats();
+        }
+
+        function sprinkle(type, count, startEnergy) {
+            let placed = 0;
+            while (placed < count) {
+                const x = Math.floor(rng() * W);
+                const y = Math.floor(rng() * H);
+                const i = idx(x, y);
+                if (world[i] === TILE.GRASS || world[i] === TILE.SOIL) {
+                    world[i] = type;
+                    energy[i] = startEnergy;
+                    placed++;
+                }
+            }
+        }
+
+        function countNear(source, x, y, type) {
+            let count = 0;
+            for (let oy = -1; oy <= 1; oy++) {
+                for (let ox = -1; ox <= 1; ox++) {
+                    if (!ox && !oy) continue;
+                    const nx = x + ox;
+                    const ny = y + oy;
+                    if (inBounds(nx, ny) && source[idx(nx, ny)] === type) count++;
+                }
+            }
+            return count;
+        }
+
+        function findNeighbor(source, x, y, types) {
+            const options = [];
+            for (let oy = -1; oy <= 1; oy++) {
+                for (let ox = -1; ox <= 1; ox++) {
+                    if (!ox && !oy) continue;
+                    const nx = x + ox;
+                    const ny = y + oy;
+                    if (!inBounds(nx, ny)) continue;
+                    const i = idx(nx, ny);
+                    if (types.includes(source[i])) options.push([nx, ny, i]);
+                }
+            }
+            return options.length ? options[Math.floor(rng() * options.length)] : null;
+        }
+
+        function stepSimulation() {
+            const source = world.slice();
+            const sourceEnergy = energy.slice();
+            const sourceAge = age.slice();
+            const next = source.slice();
+            const nextEnergy = sourceEnergy.slice();
+            const nextAge = sourceAge.slice();
+
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    const i = idx(x, y);
+                    const tile = source[i];
+                    nextAge[i] = Math.min(255, sourceAge[i] + 1);
+
+                    if (tile === TILE.SOIL || tile === TILE.ASH) {
+                        const water = countNear(source, x, y, TILE.WATER);
+                        const grass = countNear(source, x, y, TILE.GRASS);
+                        const chance = tile === TILE.ASH ? 0.035 : 0.006;
+                        if (water && rng() < 0.04 + water * 0.02) next[i] = TILE.GRASS;
+                        else if (grass >= 2 && rng() < chance + grass * 0.006) next[i] = TILE.GRASS;
+                    }
+
+                    if (tile === TILE.GRASS) {
+                        const forest = countNear(source, x, y, TILE.FOREST);
+                        if (sourceAge[i] > 22 && forest >= 2 && rng() < 0.018) next[i] = TILE.FOREST;
+                        else if (rng() < 0.002 && countNear(source, x, y, TILE.WATER) === 0) next[i] = TILE.SOIL;
+                    }
+
+                    if (tile === TILE.FOREST) {
+                        const fire = countNear(source, x, y, TILE.FIRE);
+                        if (fire && rng() < 0.23) next[i] = TILE.FIRE;
+                        else if (rng() < 0.00024 && countNear(source, x, y, TILE.WATER) === 0) next[i] = TILE.FIRE;
+                    }
+
+                    if (tile === TILE.FIRE) {
+                        if (sourceAge[i] > 3 + Math.floor(rng() * 4)) next[i] = TILE.ASH;
+                    }
+
+                    if (tile === TILE.RABBIT) {
+                        moveAnimal(source, sourceEnergy, next, nextEnergy, x, y, TILE.RABBIT, [TILE.GRASS], [TILE.GRASS, TILE.SOIL, TILE.ASH], 34, 1, 16);
+                    }
+
+                    if (tile === TILE.FOX) {
+                        moveAnimal(source, sourceEnergy, next, nextEnergy, x, y, TILE.FOX, [TILE.RABBIT], [TILE.GRASS, TILE.SOIL, TILE.ASH, TILE.FOREST], 42, 2, 24);
+                    }
+                }
+            }
+
+            world = next;
+            energy = nextEnergy;
+            age = nextAge;
+            tick++;
+        }
+
+        function moveAnimal(source, sourceEnergy, next, nextEnergy, x, y, type, foodTypes, walkableTypes, maxEnergy, cost, babyEnergy) {
+            const i = idx(x, y);
+            if (next[i] !== type) return;
+
+            let currentEnergy = sourceEnergy[i] || (type === TILE.RABBIT ? 16 : 24);
+            currentEnergy -= cost;
+            if (currentEnergy <= 0) {
+                next[i] = TILE.SOIL;
+                nextEnergy[i] = 0;
+                return;
+            }
+
+            const food = findNeighbor(source, x, y, foodTypes);
+            const target = food || findNeighbor(source, x, y, walkableTypes);
+            if (!target) {
+                nextEnergy[i] = currentEnergy;
+                return;
+            }
+
+            const [nx, ny, ni] = target;
+            const ate = food && ni === food[2];
+            const gain = type === TILE.RABBIT ? 11 : 20;
+            currentEnergy = Math.min(maxEnergy, currentEnergy + (ate ? gain : 0));
+            const oldGround = type === TILE.RABBIT ? TILE.SOIL : TILE.GRASS;
+
+            next[i] = oldGround;
+            nextEnergy[i] = 0;
+            next[ni] = type;
+            nextEnergy[ni] = currentEnergy;
+
+            if (currentEnergy > maxEnergy * 0.72 && rng() < (type === TILE.RABBIT ? 0.09 : 0.045)) {
+                const nursery = findNeighbor(next, nx, ny, [TILE.GRASS, TILE.SOIL, TILE.ASH]);
+                if (nursery) {
+                    next[nursery[2]] = type;
+                    nextEnergy[nursery[2]] = babyEnergy;
+                    nextEnergy[ni] = Math.floor(currentEnergy * 0.55);
+                }
+            }
+        }
+
+        function render() {
+            const image = ctx.createImageData(W, H);
+            const data = image.data;
+            for (let i = 0; i < size; i++) {
+                const color = colors[world[i]];
+                const r = parseInt(color.slice(1, 3), 16);
+                const g = parseInt(color.slice(3, 5), 16);
+                const b = parseInt(color.slice(5, 7), 16);
+                const shade = world[i] === TILE.WATER ? Math.sin((i % W) * 0.2 + tick * 0.2) * 10 : (noise(i % W, Math.floor(i / W)) - 0.5) * 16;
+                data[i * 4] = Math.max(0, Math.min(255, r + shade));
+                data[i * 4 + 1] = Math.max(0, Math.min(255, g + shade));
+                data[i * 4 + 2] = Math.max(0, Math.min(255, b + shade));
+                data[i * 4 + 3] = 255;
+            }
+            ctx.putImageData(image, 0, 0);
+        }
+
+        function updateStats() {
+            const counts = new Map();
+            for (const tile of world) counts.set(tile, (counts.get(tile) || 0) + 1);
+            stats.innerHTML = [
+                ['Tick', tick],
+                ['Grass', counts.get(TILE.GRASS) || 0],
+                ['Forest', counts.get(TILE.FOREST) || 0],
+                ['Rabbits', counts.get(TILE.RABBIT) || 0],
+                ['Foxes', counts.get(TILE.FOX) || 0],
+                ['Fire', counts.get(TILE.FIRE) || 0]
+            ].map(([name, value]) => `<span class="pill">${name}: <strong>${value}</strong></span>`).join('');
+        }
+
+        function paint(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((event.clientX - rect.left) / rect.width * W);
+            const y = Math.floor((event.clientY - rect.top) / rect.height * H);
+            for (let oy = -2; oy <= 2; oy++) {
+                for (let ox = -2; ox <= 2; ox++) {
+                    if (Math.hypot(ox, oy) > 2.25) continue;
+                    const nx = x + ox;
+                    const ny = y + oy;
+                    if (!inBounds(nx, ny)) continue;
+                    const i = idx(nx, ny);
+                    world[i] = brush;
+                    energy[i] = brush === TILE.RABBIT ? 18 : brush === TILE.FOX ? 26 : 0;
+                    age[i] = 0;
+                }
+            }
+            render();
+            updateStats();
+        }
+
+        function animate() {
+            if (running) {
+                const loops = Number(speed.value);
+                for (let i = 0; i < loops; i++) stepSimulation();
+                render();
+                updateStats();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        brushConfig.forEach(([label, icon, value]) => {
+            const button = document.createElement('button');
+            button.className = `brush${value === brush ? ' active' : ''}`;
+            button.innerHTML = `<span>${icon}</span>${label}`;
+            button.addEventListener('click', () => {
+                brush = value;
+                document.querySelectorAll('.brush').forEach(el => el.classList.remove('active'));
+                button.classList.add('active');
+            });
+            brushRoot.appendChild(button);
+        });
+
+        toggle.addEventListener('click', () => {
+            running = !running;
+            toggle.textContent = running ? 'Pause' : 'Resume';
+        });
+
+        document.getElementById('step').addEventListener('click', () => {
+            stepSimulation();
+            render();
+            updateStats();
+        });
+        document.getElementById('regenerate').addEventListener('click', regenerate);
+        document.getElementById('randomSeed').addEventListener('click', () => {
+            seedInput.value = `moss-${Math.floor(Math.random() * 9999).toString().padStart(4, '0')}`;
+            regenerate();
+        });
+        speed.addEventListener('input', () => speedLabel.textContent = speed.value);
+        seedInput.addEventListener('change', regenerate);
+
+        canvas.addEventListener('pointerdown', event => {
+            isPainting = true;
+            canvas.setPointerCapture(event.pointerId);
+            paint(event);
+        });
+        canvas.addEventListener('pointermove', event => {
+            if (isPainting) paint(event);
+        });
+        canvas.addEventListener('pointerup', () => isPainting = false);
+        canvas.addEventListener('pointerleave', () => isPainting = false);
+
+        regenerate();
+        animate();
+    </script>
+</body>
+</html>
