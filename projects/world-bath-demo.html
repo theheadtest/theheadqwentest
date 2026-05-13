@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Bath Demo Plan</title>
+    <style>
+        :root {
+            --ink: #f6ead0;
+            --muted: #c9b88f;
+            --panel: rgba(7, 17, 31, 0.82);
+            --panel-strong: rgba(4, 10, 20, 0.94);
+            --gold: #f0bd62;
+            --blue: #7fc8ff;
+            --rose: #f08fb2;
+            --line: rgba(240, 189, 98, 0.42);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 10% 20%, rgba(127, 200, 255, 0.16), transparent 28rem),
+                radial-gradient(circle at 86% 10%, rgba(240, 143, 178, 0.18), transparent 24rem),
+                linear-gradient(145deg, #07111f 0%, #10253b 45%, #140d1d 100%);
+        }
+
+        a { color: inherit; }
+
+        .page {
+            width: min(1180px, calc(100% - 28px));
+            margin: 0 auto;
+            padding: 28px 0 48px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .back-link {
+            text-decoration: none;
+            color: var(--muted);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 9px 14px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            min-height: 410px;
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            padding: clamp(24px, 4vw, 52px);
+            background:
+                linear-gradient(90deg, rgba(4, 10, 20, 0.92), rgba(4, 10, 20, 0.5), rgba(4, 10, 20, 0.78)),
+                var(--hero-art, linear-gradient(135deg, #355c7d, #6c5b7b, #c06c84));
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(180deg, transparent 55%, rgba(4, 10, 20, 0.76));
+        }
+
+        .hero-content { position: relative; z-index: 1; max-width: 610px; }
+        .eyebrow { color: var(--gold); letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; }
+        h1 { font-size: clamp(2.8rem, 8vw, 6.7rem); line-height: 0.9; margin: 12px 0; font-family: Georgia, "Times New Roman", serif; }
+        .subtitle { color: #f7dfad; font-size: clamp(1rem, 2vw, 1.35rem); line-height: 1.55; max-width: 52ch; }
+
+        .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+        button {
+            border: 0;
+            border-radius: 14px;
+            padding: 12px 16px;
+            color: var(--ink);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            cursor: pointer;
+            font-weight: 800;
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+        button:hover, button.active { transform: translateY(-1px); border-color: var(--gold); background: rgba(240, 189, 98, 0.18); }
+
+        .grid { display: grid; gap: 18px; }
+        .two-col { grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr); margin-top: 18px; }
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            padding: 20px;
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+            backdrop-filter: blur(14px);
+        }
+        .panel h2 { font-family: Georgia, "Times New Roman", serif; color: #ffe1a0; margin: 0 0 14px; }
+        .panel p { color: #dfd2b5; line-height: 1.55; }
+
+        .location-tabs, .character-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 16px; }
+
+        .scene {
+            min-height: 460px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: var(--scene-art);
+            background-size: cover;
+            background-position: center;
+        }
+        .scene::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(6, 12, 23, 0.05), rgba(6, 12, 23, 0.92));
+        }
+
+        .scene-character {
+            position: absolute;
+            left: 50%;
+            bottom: 112px;
+            width: min(270px, 48vw);
+            aspect-ratio: 0.68;
+            transform: translateX(-50%);
+            border-radius: 46% 46% 18% 18%;
+            background: var(--character-art);
+            background-size: cover;
+            background-position: center top;
+            border: 2px solid rgba(255, 236, 186, 0.72);
+            box-shadow: 0 26px 80px rgba(0, 0, 0, 0.55);
+        }
+        .scene-character::after {
+            content: "Click me";
+            position: absolute;
+            right: 8px;
+            top: 10px;
+            font-size: 0.78rem;
+            color: #1b1220;
+            padding: 6px 9px;
+            border-radius: 999px;
+            background: #ffe1a0;
+        }
+
+        .dialogue {
+            position: absolute;
+            left: 18px;
+            right: 18px;
+            bottom: 18px;
+            z-index: 1;
+            border-radius: 18px;
+            padding: 16px;
+            background: rgba(4, 10, 20, 0.86);
+            border: 1px solid rgba(240, 189, 98, 0.45);
+        }
+        .dialogue strong { color: #ffe1a0; display: block; margin-bottom: 6px; }
+
+        .carousel-controls { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; color: var(--muted); }
+        .counter { color: var(--gold); font-weight: 800; }
+
+        .character-card {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 18px;
+            align-items: stretch;
+        }
+        .skin-preview {
+            min-height: 280px;
+            border-radius: 18px;
+            background: var(--skin-art);
+            background-size: cover;
+            background-position: center top;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .stat-list { display: grid; gap: 10px; margin: 14px 0; padding: 0; list-style: none; }
+        .stat-list li { border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 10px 12px; background: rgba(255, 255, 255, 0.05); }
+
+        .prompt-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .prompt-card { border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 16px; padding: 14px; background: rgba(255, 255, 255, 0.05); }
+        code { display: block; white-space: pre-wrap; color: #ffefc8; line-height: 1.45; }
+
+        .footer-note { color: var(--muted); text-align: center; margin: 24px 0 0; }
+
+        @media (max-width: 880px) {
+            .two-col, .character-card, .prompt-grid { grid-template-columns: 1fr; }
+            .skin-preview { min-height: 360px; }
+            .hero { min-height: 500px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <nav class="topbar">
+            <a class="back-link" href="../index.html">← Idea Lab</a>
+            <span class="eyebrow">Static GitHub Pages prototype</span>
+        </nav>
+
+        <section class="hero" id="hero">
+            <div class="hero-content">
+                <div class="eyebrow">World Bath</div>
+                <h1>Relax. Explore. Connect.</h1>
+                <p class="subtitle">A small visual-novel/gacha-style demo is practical for this repository because it can be built as one static HTML page: no backend, no accounts, no real purchases, and assets loaded from GitHub Pages.</p>
+                <div class="hero-actions">
+                    <button data-jump="locations">Explore locations</button>
+                    <button data-jump="characters">View companions</button>
+                    <button data-jump="prompts">Asset prompts</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid two-col" id="locations">
+            <article class="panel">
+                <h2>1. Location menu + scene carousel</h2>
+                <p>Select a location, cycle through themed backgrounds, click the active character, and read a short visual-novel dialogue beat.</p>
+                <div class="location-tabs" id="locationTabs"></div>
+                <div class="scene" id="scene">
+                    <button class="scene-character" id="sceneCharacter" aria-label="Talk to character"></button>
+                    <div class="dialogue">
+                        <strong id="dialogueName"></strong>
+                        <span id="dialogueText"></span>
+                    </div>
+                </div>
+                <div class="carousel-controls">
+                    <button id="prevScene">← Previous background</button>
+                    <span><span class="counter" id="sceneCounter"></span> background concept</span>
+                    <button id="nextScene">Next background →</button>
+                </div>
+            </article>
+
+            <aside class="panel">
+                <h2>Feasibility</h2>
+                <p><strong>Yes, this is possible.</strong> The current project is a static GitHub Pages-style site, so the demo should use plain HTML, CSS, and JavaScript first. It keeps hosting simple and avoids build tooling.</p>
+                <ul class="stat-list">
+                    <li><strong>Best MVP:</strong> 3 locations × 3 backgrounds × 3 characters × 3 skins.</li>
+                    <li><strong>Image count:</strong> 1 key art + 9 backgrounds + 3 base transparent characters + 9 skin portraits = 22 images.</li>
+                    <li><strong>Formats:</strong> AVIF/WebP for backgrounds, PNG/WebP with transparency for characters.</li>
+                    <li><strong>Safety:</strong> adult characters only, tasteful spa/fashion styling, no nudity.</li>
+                </ul>
+            </aside>
+        </section>
+
+        <section class="panel" id="characters" style="margin-top:18px;">
+            <h2>2. Character viewer + skin carousel</h2>
+            <p>Each companion can have profile data, story hooks, favorite gifts, and a carousel of collectible outfits/skins.</p>
+            <div class="character-tabs" id="characterTabs"></div>
+            <div class="character-card">
+                <div class="skin-preview" id="skinPreview"></div>
+                <div>
+                    <h2 id="characterName"></h2>
+                    <p id="characterBio"></p>
+                    <ul class="stat-list" id="characterStats"></ul>
+                    <div class="carousel-controls">
+                        <button id="prevSkin">← Previous skin</button>
+                        <span><span class="counter" id="skinCounter"></span> collectible look</span>
+                        <button id="nextSkin">Next skin →</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel" id="prompts" style="margin-top:18px;">
+            <h2>3. Recommended generation prompts</h2>
+            <p>Generate in consistent batches. Keep the same art direction, camera language, character reference, age statement, and negative prompt across all images.</p>
+            <div class="prompt-grid">
+                <div class="prompt-card">
+                    <h3>Location background prompt</h3>
+                    <code>Wide cinematic background for a tasteful gacha visual novel, [COUNTRY] traditional bathing destination, [SEASON/TIME], no people, warm lantern light, detailed architecture, steam, water reflections, layered depth, 16:9, game background, painterly high detail, safe for work</code>
+                </div>
+                <div class="prompt-card">
+                    <h3>Character base prompt</h3>
+                    <code>Full-body transparent-background character sprite, adult woman age 24+, [COUNTRY] companion, elegant spa travel outfit inspired by local textiles, friendly expression, visual novel character art, consistent face, clean silhouette, hands visible, safe for work, PNG alpha</code>
+                </div>
+                <div class="prompt-card">
+                    <h3>Skin / outfit prompt</h3>
+                    <code>Portrait/card art of the same adult character, [SKIN THEME] collectible outfit, tasteful fashion, matching accessories, gacha rarity frame space, confident pose, no nudity, high-detail illustration, 3:4 character card</code>
+                </div>
+                <div class="prompt-card">
+                    <h3>Negative prompt</h3>
+                    <code>minor, childlike, nude, explicit, see-through clothing, distorted hands, extra fingers, bad anatomy, duplicate face, text artifacts, watermark, logo, low resolution, blurry</code>
+                </div>
+            </div>
+        </section>
+
+        <p class="footer-note">Demo uses CSS placeholder art so the team can validate flow before spending image-generation budget.</p>
+    </main>
+
+    <script>
+        const locations = [
+            {
+                id: 'japan',
+                name: 'Japan',
+                companion: 'Sakura',
+                characterArt: 'linear-gradient(160deg, #ffd6e7 0%, #7b2448 48%, #160b19 100%)',
+                backgrounds: [
+                    { name: 'Snow onsen village', art: 'radial-gradient(circle at 65% 30%, rgba(255,255,255,.9), transparent 4rem), linear-gradient(135deg, #10243d, #6a86a8 45%, #e9f4ff)' },
+                    { name: 'Cherry blossom ryokan', art: 'radial-gradient(circle at 30% 20%, #ffc7dc, transparent 9rem), linear-gradient(135deg, #1d2334, #8d5367 48%, #f5bdc9)' },
+                    { name: 'Lantern garden bath', art: 'radial-gradient(circle at 75% 30%, #ffd789, transparent 7rem), linear-gradient(135deg, #09131c, #244632 48%, #7b4b2e)' }
+                ],
+                dialogues: [
+                    'The spring is quiet tonight. If you listen, the cedar trees sound like waves.',
+                    'Every guest leaves a small story behind. What should our story be?',
+                    'I saved this lantern for the path back. It feels warmer when shared.'
+                ]
+            },
+            {
+                id: 'turkey',
+                name: 'Turkey',
+                companion: 'Ayla',
+                characterArt: 'linear-gradient(160deg, #f6c083 0%, #6f3f2f 46%, #10131f 100%)',
+                backgrounds: [
+                    { name: 'Marble hammam hall', art: 'radial-gradient(circle at 50% 10%, #ffe5af, transparent 8rem), linear-gradient(135deg, #1b2533, #8c7965 52%, #d7c2a2)' },
+                    { name: 'Dome skylight bath', art: 'radial-gradient(circle at 50% 24%, #9fe7ff, transparent 7rem), linear-gradient(135deg, #172033, #486270 50%, #b89f83)' },
+                    { name: 'Old bazaar retreat', art: 'radial-gradient(circle at 25% 25%, #ffc36c, transparent 8rem), linear-gradient(135deg, #190d12, #604130 48%, #d19858)' }
+                ],
+                dialogues: [
+                    'A hammam is not only a bath. It is a pause between journeys.',
+                    'Choose the scent: rose, amber, or mint. Each changes the memory.',
+                    'The city is loud outside, but here we can hear our own thoughts.'
+                ]
+            },
+            {
+                id: 'iceland',
+                name: 'Iceland',
+                companion: 'Freya',
+                characterArt: 'linear-gradient(160deg, #e8f7ff 0%, #57788f 45%, #101927 100%)',
+                backgrounds: [
+                    { name: 'Blue geothermal lagoon', art: 'radial-gradient(circle at 50% 58%, #9de9ff, transparent 12rem), linear-gradient(135deg, #071422, #315d74 54%, #d8f5ff)' },
+                    { name: 'Northern lights spring', art: 'radial-gradient(circle at 20% 10%, #7dffbf, transparent 9rem), linear-gradient(135deg, #030713, #11324d 46%, #54417c)' },
+                    { name: 'Lava rock spa', art: 'radial-gradient(circle at 75% 72%, #ff8b46, transparent 8rem), linear-gradient(135deg, #07080d, #273847 50%, #86bfd0)' }
+                ],
+                dialogues: [
+                    'The water is older than the road that brought us here.',
+                    'When the aurora appears, people always whisper. Nobody tells them to.',
+                    'Careful on the lava stone. Adventure is better without slipping.'
+                ]
+            }
+        ];
+
+        const characters = [
+            {
+                name: 'Sakura', country: 'Japan', gift: 'Pressed maple leaf bookmark', trait: 'Calm guide',
+                bio: 'A ryokan host who teaches guests the etiquette and poetry of seasonal onsen travel.',
+                skins: [
+                    { name: 'Ryokan Host', art: 'linear-gradient(160deg, #ffe0ec, #8c3156 48%, #17101b)' },
+                    { name: 'Festival Evening', art: 'linear-gradient(160deg, #ffd46a, #af4666 48%, #1a1022)' },
+                    { name: 'Winter Guide', art: 'linear-gradient(160deg, #f5fbff, #7095b5 48%, #17243a)' }
+                ]
+            },
+            {
+                name: 'Ayla', country: 'Turkey', gift: 'Rose soap', trait: 'Confident storyteller',
+                bio: 'A historian of hammam rituals who connects architecture, fragrance, and conversation.',
+                skins: [
+                    { name: 'Hammam Attendant', art: 'linear-gradient(160deg, #f8d7aa, #8a5438 48%, #17131c)' },
+                    { name: 'Bazaar Silk', art: 'linear-gradient(160deg, #ffd36d, #4c7d83 48%, #17131c)' },
+                    { name: 'Moonlit Terrace', art: 'linear-gradient(160deg, #dfe7ff, #5a4c87 48%, #111625)' }
+                ]
+            },
+            {
+                name: 'Freya', country: 'Iceland', gift: 'Obsidian charm', trait: 'Dry humor',
+                bio: 'A geothermal researcher who balances scientific curiosity with local legends.',
+                skins: [
+                    { name: 'Lagoon Researcher', art: 'linear-gradient(160deg, #e3fbff, #5687a0 48%, #101b2b)' },
+                    { name: 'Aurora Coat', art: 'linear-gradient(160deg, #89ffc1, #4f4d94 48%, #0b1020)' },
+                    { name: 'Lava Trail', art: 'linear-gradient(160deg, #ffb36d, #46535f 48%, #101010)' }
+                ]
+            }
+        ];
+
+        let locationIndex = 0;
+        let sceneIndex = 0;
+        let characterIndex = 0;
+        let skinIndex = 0;
+        let dialogueClicks = 0;
+
+        const scene = document.getElementById('scene');
+        const locationTabs = document.getElementById('locationTabs');
+        const sceneCharacter = document.getElementById('sceneCharacter');
+        const dialogueName = document.getElementById('dialogueName');
+        const dialogueText = document.getElementById('dialogueText');
+        const sceneCounter = document.getElementById('sceneCounter');
+        const characterTabs = document.getElementById('characterTabs');
+        const skinPreview = document.getElementById('skinPreview');
+        const characterName = document.getElementById('characterName');
+        const characterBio = document.getElementById('characterBio');
+        const characterStats = document.getElementById('characterStats');
+        const skinCounter = document.getElementById('skinCounter');
+
+        function renderLocationTabs() {
+            locationTabs.innerHTML = locations.map((location, index) => `<button class="${index === locationIndex ? 'active' : ''}" data-location="${index}">${location.name}</button>`).join('');
+        }
+
+        function renderScene() {
+            const location = locations[locationIndex];
+            const background = location.backgrounds[sceneIndex];
+            const dialogue = location.dialogues[(sceneIndex + dialogueClicks) % location.dialogues.length];
+            scene.style.setProperty('--scene-art', background.art);
+            sceneCharacter.style.setProperty('--character-art', location.characterArt);
+            dialogueName.textContent = `${location.companion} · ${background.name}`;
+            dialogueText.textContent = dialogue;
+            sceneCounter.textContent = `${sceneIndex + 1}/${location.backgrounds.length}`;
+            renderLocationTabs();
+        }
+
+        function renderCharacterTabs() {
+            characterTabs.innerHTML = characters.map((character, index) => `<button class="${index === characterIndex ? 'active' : ''}" data-character="${index}">${character.name}</button>`).join('');
+        }
+
+        function renderCharacter() {
+            const character = characters[characterIndex];
+            const skin = character.skins[skinIndex];
+            skinPreview.style.setProperty('--skin-art', skin.art);
+            characterName.textContent = `${character.name} · ${skin.name}`;
+            characterBio.textContent = character.bio;
+            characterStats.innerHTML = `
+                <li><strong>Country:</strong> ${character.country}</li>
+                <li><strong>Favorite gift:</strong> ${character.gift}</li>
+                <li><strong>Personality hook:</strong> ${character.trait}</li>
+            `;
+            skinCounter.textContent = `${skinIndex + 1}/${character.skins.length}`;
+            renderCharacterTabs();
+        }
+
+        locationTabs.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-location]');
+            if (!button) return;
+            locationIndex = Number(button.dataset.location);
+            sceneIndex = 0;
+            dialogueClicks = 0;
+            renderScene();
+        });
+
+        characterTabs.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-character]');
+            if (!button) return;
+            characterIndex = Number(button.dataset.character);
+            skinIndex = 0;
+            renderCharacter();
+        });
+
+        document.getElementById('prevScene').addEventListener('click', () => {
+            sceneIndex = (sceneIndex - 1 + locations[locationIndex].backgrounds.length) % locations[locationIndex].backgrounds.length;
+            renderScene();
+        });
+        document.getElementById('nextScene').addEventListener('click', () => {
+            sceneIndex = (sceneIndex + 1) % locations[locationIndex].backgrounds.length;
+            renderScene();
+        });
+        sceneCharacter.addEventListener('click', () => {
+            dialogueClicks += 1;
+            renderScene();
+        });
+        document.getElementById('prevSkin').addEventListener('click', () => {
+            skinIndex = (skinIndex - 1 + characters[characterIndex].skins.length) % characters[characterIndex].skins.length;
+            renderCharacter();
+        });
+        document.getElementById('nextSkin').addEventListener('click', () => {
+            skinIndex = (skinIndex + 1) % characters[characterIndex].skins.length;
+            renderCharacter();
+        });
+        document.querySelectorAll('[data-jump]').forEach((button) => {
+            button.addEventListener('click', () => document.getElementById(button.dataset.jump).scrollIntoView({ behavior: 'smooth' }));
+        });
+
+        renderScene();
+        renderCharacter();
+    </script>
+</body>
+</html>
