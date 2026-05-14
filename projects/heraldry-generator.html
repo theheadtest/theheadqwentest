@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Procedural Flag & Heraldry Generator - Idea Lab</title>
+    <style>
+      :root {
+        --bg: #111827;
+        --paper: #fff7ed;
+        --panel: rgba(15, 23, 42, 0.86);
+        --line: rgba(251, 191, 36, 0.24);
+        --text: #fff7ed;
+        --muted: #cbd5e1;
+        --gold: #fbbf24;
+        --red: #dc2626;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background:
+          radial-gradient(
+            circle at 12% 10%,
+            rgba(251, 191, 36, 0.18),
+            transparent 32%
+          ),
+          radial-gradient(
+            circle at 86% 18%,
+            rgba(220, 38, 38, 0.16),
+            transparent 34%
+          ),
+          linear-gradient(135deg, #111827, #2f1c16 55%, #0f172a);
+      }
+      .page {
+        width: min(1480px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 24px 0 38px;
+      }
+      .back-link {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        color: var(--gold);
+        text-decoration: none;
+        font-weight: 950;
+        margin-bottom: 18px;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+      header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 18px;
+        align-items: end;
+        margin-bottom: 20px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2.15rem, 5vw, 4.5rem);
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+      }
+      .subtitle {
+        max-width: 890px;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+      .badge {
+        border: 1px solid rgba(251, 191, 36, 0.38);
+        background: rgba(251, 191, 36, 0.1);
+        color: #fde68a;
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-weight: 950;
+        white-space: nowrap;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: 0 24px 90px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(18px);
+      }
+      .controls {
+        padding: 20px;
+        position: sticky;
+        top: 14px;
+      }
+      .block + .block {
+        margin-top: 18px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(251, 191, 36, 0.18);
+      }
+      h2,
+      h3 {
+        margin: 0 0 12px;
+        letter-spacing: -0.025em;
+      }
+      h2 {
+        font-size: 1.1rem;
+      }
+      label {
+        display: block;
+        margin: 12px 0 7px;
+        color: #fde68a;
+        font-size: 0.78rem;
+        font-weight: 950;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      input,
+      select,
+      button {
+        width: 100%;
+        border-radius: 13px;
+        border: 1px solid rgba(251, 191, 36, 0.28);
+        font: inherit;
+      }
+      input,
+      select {
+        color: var(--text);
+        background: rgba(2, 6, 23, 0.72);
+        padding: 11px 12px;
+        outline: none;
+      }
+      input[type="range"] {
+        padding: 0;
+        accent-color: var(--gold);
+      }
+      button {
+        cursor: pointer;
+        border: 0;
+        padding: 12px 14px;
+        color: #1f1304;
+        background: linear-gradient(135deg, #fbbf24, #f97316);
+        font-weight: 950;
+        transition:
+          transform 0.15s ease,
+          filter 0.15s ease;
+      }
+      button:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.08);
+      }
+      button.secondary {
+        color: var(--text);
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid rgba(251, 191, 36, 0.28);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .value-row {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 6px;
+      }
+      .checkline {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #cbd5e1;
+        font-size: 0.9rem;
+        margin-top: 10px;
+      }
+      .checkline input {
+        width: auto;
+        accent-color: var(--gold);
+      }
+      .stage {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+        gap: 18px;
+        padding: 18px;
+      }
+      .artboard {
+        display: grid;
+        place-items: center;
+        min-height: 660px;
+        border-radius: 18px;
+        background:
+          radial-gradient(
+            circle at center,
+            rgba(251, 191, 36, 0.1),
+            transparent 42%
+          ),
+          rgba(2, 6, 23, 0.52);
+        border: 1px solid rgba(251, 191, 36, 0.14);
+      }
+      svg {
+        width: min(100%, 680px);
+        height: auto;
+        filter: drop-shadow(0 28px 44px rgba(0, 0, 0, 0.45));
+      }
+      .details {
+        display: grid;
+        gap: 14px;
+      }
+      .card {
+        border: 1px solid rgba(251, 191, 36, 0.18);
+        background: rgba(30, 41, 59, 0.64);
+        border-radius: 18px;
+        padding: 16px;
+      }
+      .card p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+      .motto {
+        font-family: Georgia, serif;
+        font-size: 1.35rem;
+        color: #fde68a;
+      }
+      .swatches {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .swatch {
+        height: 34px;
+        flex: 1;
+        min-width: 48px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+      }
+      .mini-gallery {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .mini {
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+        min-height: 70px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+      }
+      .log-panel {
+        margin-top: 20px;
+        padding: 18px;
+      }
+      .log-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .log {
+        height: 180px;
+        overflow: auto;
+        border-radius: 14px;
+        border: 1px solid rgba(251, 191, 36, 0.18);
+        background: rgba(2, 6, 23, 0.72);
+        padding: 12px;
+        color: #fde68a;
+        font:
+          12px/1.55 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        white-space: pre-wrap;
+      }
+      @media (max-width: 1060px) {
+        header,
+        .layout,
+        .stage {
+          grid-template-columns: 1fr;
+        }
+        .controls {
+          position: static;
+        }
+        .artboard {
+          min-height: 520px;
+        }
+      }
+      @media (max-width: 560px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+        .page {
+          width: min(100% - 18px, 1480px);
+        }
+        .stage {
+          padding: 10px;
+        }
+        .artboard {
+          min-height: 360px;
+        }
+        .mini-gallery {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <a class="back-link" href="../index.html">← Back to Idea Lab</a>
+      <header>
+        <div>
+          <h1>🛡️ Flag & Heraldry Generator</h1>
+          <p class="subtitle">
+            Create a complete faction identity from a seed: banner, coat of
+            arms, tinctures, charges, motto, house traits, variant flags, and an
+            SVG download suitable for a static GitHub Pages project.
+          </p>
+        </div>
+        <div class="badge">Seeded · SVG · Worldbuilding ready</div>
+      </header>
+      <section class="layout">
+        <aside class="panel controls">
+          <div class="block">
+            <h2>House seed</h2>
+            <label for="seed">Seed</label
+            ><input
+              id="seed"
+              value="house-ember-wolf"
+              spellcheck="false"
+            /><label for="style">Style</label
+            ><select id="style">
+              <option value="classic">Classic medieval</option>
+              <option value="maritime">Maritime league</option>
+              <option value="desert">Desert dynasty</option>
+              <option value="arcane">Arcane order</option>
+              <option value="industrial">Industrial guild</option>
+            </select>
+            <div class="row" style="margin-top: 14px">
+              <button id="generate">Generate</button
+              ><button id="randomize" class="secondary">Random Seed</button>
+            </div>
+          </div>
+          <div class="block">
+            <h2>Composition</h2>
+            <label for="complexity">Complexity</label
+            ><input id="complexity" type="range" min="1" max="5" value="3" />
+            <div class="value-row">
+              <span>bold</span><strong id="complexityValue">3</strong
+              ><span>ornate</span>
+            </div>
+            <label for="variants">Variant banners</label
+            ><input id="variants" type="range" min="1" max="6" value="3" />
+            <div class="value-row">
+              <span>one</span><strong id="variantsValue">3</strong
+              ><span>set</span>
+            </div>
+            <label class="checkline"
+              ><input id="supporters" type="checkbox" checked /> Supporters and
+              laurel</label
+            ><label class="checkline"
+              ><input id="texture" type="checkbox" checked /> Parchment
+              texture</label
+            ><label class="checkline"
+              ><input id="labels" type="checkbox" checked /> Identity
+              notes</label
+            >
+          </div>
+          <div class="block">
+            <h2>Export</h2>
+            <button id="downloadSvg" class="secondary">Download SVG</button
+            ><button
+              id="downloadPng"
+              class="secondary"
+              style="margin-top: 10px"
+            >
+              Download PNG
+            </button>
+          </div>
+        </aside>
+        <section>
+          <div class="panel stage">
+            <div class="artboard"><div id="svgHost"></div></div>
+            <div class="details">
+              <article class="card">
+                <h2 id="houseName">—</h2>
+                <p class="motto" id="motto">—</p>
+                <p id="story">—</p>
+              </article>
+              <article class="card">
+                <h2>Tinctures</h2>
+                <div class="swatches" id="swatches"></div>
+                <p id="paletteNote">—</p>
+              </article>
+              <article class="card">
+                <h2>Charges & rules</h2>
+                <p id="rules">—</p>
+              </article>
+              <article class="card">
+                <h2>Banner variants</h2>
+                <div class="mini-gallery" id="miniGallery"></div>
+              </article>
+            </div>
+          </div>
+          <div class="panel log-panel">
+            <div class="log-head">
+              <h2>Generation log</h2>
+              <button
+                id="clearLog"
+                class="secondary"
+                style="width: auto; padding: 8px 11px"
+              >
+                Clear
+              </button>
+            </div>
+            <div id="log" class="log"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script>
+      "use strict";
+      const host = document.getElementById("svgHost"),
+        logEl = document.getElementById("log"),
+        c = {
+          seed: document.getElementById("seed"),
+          style: document.getElementById("style"),
+          complexity: document.getElementById("complexity"),
+          variants: document.getElementById("variants"),
+          supporters: document.getElementById("supporters"),
+          texture: document.getElementById("texture"),
+          labels: document.getElementById("labels"),
+        };
+      let currentSvg = "";
+      const styles = {
+        classic: {
+          nouns: ["Wolf", "Oak", "Crown", "Hart", "Raven"],
+          palette: ["#7f1d1d", "#fbbf24", "#f8fafc", "#1e3a8a", "#166534"],
+          mottos: [
+            "By oath and iron",
+            "Courage under crown",
+            "Rooted beyond ruin",
+          ],
+        },
+        maritime: {
+          nouns: ["Tide", "Anchor", "Gull", "Pearl", "Leviathan"],
+          palette: ["#0f766e", "#38bdf8", "#f8fafc", "#1e40af", "#f59e0b"],
+          mottos: [
+            "Through storm, through star",
+            "The deep remembers",
+            "Harbors for the brave",
+          ],
+        },
+        desert: {
+          nouns: ["Sun", "Scorpion", "Dune", "Saffron", "Mirage"],
+          palette: ["#92400e", "#f59e0b", "#fde68a", "#7c2d12", "#fff7ed"],
+          mottos: [
+            "Endure the burning road",
+            "Gold from dust",
+            "No shadow conquers dawn",
+          ],
+        },
+        arcane: {
+          nouns: ["Moon", "Key", "Star", "Owl", "Obsidian"],
+          palette: ["#581c87", "#a78bfa", "#f0abfc", "#020617", "#e0f2fe"],
+          mottos: [
+            "Seek the hidden gate",
+            "Wisdom wakes in shadow",
+            "Stars obey the patient",
+          ],
+        },
+        industrial: {
+          nouns: ["Hammer", "Gear", "Bridge", "Anvil", "Torch"],
+          palette: ["#374151", "#f97316", "#f8fafc", "#111827", "#fbbf24"],
+          mottos: [
+            "Built to outlast kings",
+            "Labor, spark, ascent",
+            "The furnace keeps faith",
+          ],
+        },
+      };
+      const charges = [
+        "lion",
+        "eagle",
+        "tree",
+        "tower",
+        "star",
+        "ship",
+        "key",
+        "gear",
+        "dragon",
+        "flower",
+      ];
+      const divisions = [
+        "plain",
+        "per-pale",
+        "per-fess",
+        "bend",
+        "chevron",
+        "cross",
+        "quartered",
+      ];
+      function hash(t) {
+        let h = 2166136261 >>> 0;
+        for (let i = 0; i < t.length; i++) {
+          h ^= t.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        return h >>> 0;
+      }
+      class RNG {
+        constructor(s) {
+          this.state = hash(s || "seed");
+        }
+        next() {
+          let t = (this.state += 0x6d2b79f5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        }
+        range(a, b) {
+          return a + (b - a) * this.next();
+        }
+        int(a, b) {
+          return Math.floor(this.range(a, b + 1));
+        }
+        pick(a) {
+          return a[Math.floor(this.next() * a.length)];
+        }
+      }
+      function log(t, d) {
+        logEl.textContent =
+          `[${new Date().toLocaleTimeString()}] ${t}${d ? " — " + d : ""}\n` +
+          logEl.textContent;
+      }
+      function sync() {
+        complexityValue.textContent = c.complexity.value;
+        variantsValue.textContent = c.variants.value;
+      }
+      function randomSeed() {
+        const rng = new RNG(String(Date.now()));
+        c.seed.value = `house-${rng.pick(["ember", "silver", "storm", "amber", "violet", "iron", "opal"])}-${rng.pick(["wolf", "gate", "rose", "hammer", "moon", "tide", "crown"])}`;
+        generate();
+      }
+      function chargeSvg(kind, color, x = 300, y = 280, s = 1) {
+        if (kind === "lion")
+          return `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}"><path d="M-58 48c26-8 32-30 18-52 20-20 52-18 72 0 19 17 21 44 8 64 18 7 32 22 36 42-28 4-55-5-72-25-16 20-43 28-72 23 4-22 18-39 38-48z"/><circle cx="-5" cy="-36" r="36"/><path d="M22-66l32-28-7 46zM-32-66l-32-28 7 46z"/></g>`;
+        if (kind === "eagle")
+          return `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}"><path d="M0-70c20 35 72 28 116 4-20 40-55 72-104 78l16 72-28-34-28 34 16-72c-49-6-84-38-104-78 44 24 96 31 116-4z"/><circle cx="0" cy="-46" r="18"/></g>`;
+        if (kind === "tree")
+          return `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}"><rect x="-14" y="-10" width="28" height="100" rx="9"/><circle cx="0" cy="-58" r="58"/><circle cx="-42" cy="-20" r="38"/><circle cx="42" cy="-20" r="38"/></g>`;
+        if (kind === "tower")
+          return `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}"><path d="M-62-72h34v28h22v-28h34v28h22v-28h34v172H-62z"/><rect x="-22" y="28" width="44" height="72" rx="22" fill="#000" opacity=".28"/></g>`;
+        if (kind === "ship")
+          return `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}"><path d="M-108 32H108L78 82H-78z"/><path d="M-8-98h16v130H-8z"/><path d="M12-82c44 18 64 48 58 86H12zM-12-66c-40 16-58 42-52 74h52z"/></g>`;
+        if (kind === "key")
+          return `<g transform="translate(${x} ${y}) scale(${s})" fill="none" stroke="${color}" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"><circle cx="-54" cy="-10" r="42"/><path d="M-12-10H98M62-10v42M92-10v26"/></g>`;
+        if (kind === "gear")
+          return `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}"><path d="M0-94l18 30 34-12 8 36 36 8-12 34 30 18-30 18 12 34-36 8-8 36-34-12-18 30-18-30-34 12-8-36-36-8 12-34-30-18 30-18-12-34 36-8 8-36 34 12z"/><circle cx="0" cy="0" r="34" fill="#000" opacity=".28"/></g>`;
+        if (kind === "dragon")
+          return `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}"><path d="M-86 64c44-76 100-104 154-82-32 4-45 26-36 51 14 39-24 67-76 59 40-13 52-37 33-58-24 4-45 19-75 30z"/><path d="M26-27l54-70 10 74zM54-10l64-18-38 56z"/></g>`;
+        if (kind === "flower")
+          return `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}">${[0, 1, 2, 3, 4, 5].map((i) => `<ellipse rx="24" ry="66" transform="rotate(${i * 60}) translate(0 -48)"/>`).join("")}<circle r="24" fill="#000" opacity=".2"/></g>`;
+        return `<g transform="translate(${x} ${y}) scale(${s})" fill="${color}"><path d="M0-104L28-30l80 2-64 48 22 80L0 56l-66 44 22-80-64-48 80-2z"/></g>`;
+      }
+      function shieldPaths(div, a, b, c) {
+        const base = `M120 72H480V340c0 116-86 200-180 238-94-38-180-122-180-238z`;
+        let fields = `<path d="${base}" fill="${a}"/>`;
+        if (div === "per-pale")
+          fields += `<path d="M300 72H480V340c0 116-86 200-180 238z" fill="${b}"/>`;
+        if (div === "per-fess")
+          fields += `<path d="M120 72H480V310H120z" fill="${b}"/>`;
+        if (div === "bend")
+          fields += `<path d="M90 72H220L510 430V600H380z" fill="${b}"/>`;
+        if (div === "chevron")
+          fields += `<path d="M120 330L300 188 480 330v92L300 280 120 422z" fill="${b}"/>`;
+        if (div === "cross")
+          fields += `<path d="M260 72h80v500h-80zM120 246h360v84H120z" fill="${b}"/>`;
+        if (div === "quartered")
+          fields += `<path d="M300 72H480V310H300zM120 310H300v260c-70-34-130-101-160-180-13-34-20-68-20-80z" fill="${b}"/>`;
+        if (div === "plain" && c)
+          fields += `<circle cx="300" cy="292" r="142" fill="${c}" opacity=".32"/>`;
+        return `${fields}<path d="${base}" fill="none" stroke="#f8fafc" stroke-width="10"/><path d="${base}" fill="none" stroke="#111827" stroke-width="4" opacity=".35"/>`;
+      }
+      function generate() {
+        sync();
+        const started = performance.now(),
+          rng = new RNG(c.seed.value + c.style.value),
+          st = styles[c.style.value],
+          pal = [...st.palette].sort(() => rng.next() - 0.5),
+          house = `House ${rng.pick(["Val", "Mer", "Ash", "Dor", "Cal", "Ser", "Nor", "Ith"])}${rng.pick(st.nouns)}`,
+          motto = rng.pick(st.mottos),
+          division = rng.pick(divisions),
+          charge = rng.pick(charges),
+          complex = Number(c.complexity.value);
+        const accent = pal[2],
+          metal = pal[1],
+          dark = pal[3],
+          base = pal[0],
+          extra = pal[4];
+        let pattern = shieldPaths(division, base, dark, extra);
+        pattern += chargeSvg(charge, metal, 300, 296, complex > 3 ? 1.05 : 0.9);
+        if (complex >= 3)
+          pattern +=
+            chargeSvg(rng.pick(charges), accent, 190, 205, 0.34) +
+            chargeSvg(rng.pick(charges), accent, 410, 205, 0.34);
+        if (complex >= 4)
+          pattern += `<path d="M154 430c74 34 218 34 292 0" fill="none" stroke="${accent}" stroke-width="18" stroke-linecap="round" opacity=".75"/>`;
+        const texture = c.texture.checked
+          ? `<filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="table" tableValues="0 .13"/></feComponentTransfer><feBlend in="SourceGraphic" mode="multiply"/></filter>`
+          : "";
+        const supporters = c.supporters.checked
+          ? `<g fill="none" stroke="${metal}" stroke-width="10" opacity=".72"><path d="M106 560C42 452 54 322 108 220"/><path d="M494 560c64-108 52-238-2-340"/>${Array.from({ length: 9 }, (_, i) => `<ellipse cx="${86 + i * 7}" cy="${536 - i * 34}" rx="14" ry="30" transform="rotate(${-28 + i * 3} ${86 + i * 7} ${536 - i * 34})"/>`).join("")}${Array.from({ length: 9 }, (_, i) => `<ellipse cx="${514 - i * 7}" cy="${536 - i * 34}" rx="14" ry="30" transform="rotate(${28 - i * 3} ${514 - i * 7} ${536 - i * 34})"/>`).join("")}</g>`
+          : "";
+        currentSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" role="img" aria-label="Generated coat of arms for ${house}"><defs>${texture}<linearGradient id="paper" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#fff7ed"/><stop offset="1" stop-color="#fed7aa"/></linearGradient></defs><rect width="600" height="760" rx="32" fill="url(#paper)" ${c.texture.checked ? 'filter="url(#grain)"' : ""}/><g transform="translate(0 18)">${supporters}<g>${pattern}</g><path d="M164 648H436l-32 54H196z" fill="${dark}"/><text x="300" y="684" text-anchor="middle" font-family="Georgia,serif" font-size="26" font-weight="700" fill="${metal}">${motto.toUpperCase()}</text></g></svg>`;
+        host.innerHTML = currentSvg;
+        document.getElementById("houseName").textContent = house;
+        document.getElementById("motto").textContent = `“${motto}”`;
+        document.getElementById("story").textContent =
+          `A ${c.style.options[c.style.selectedIndex].text.toLowerCase()} faction marked by the ${charge}, using ${division.replace("-", " ")} division to signal lineage, obligation, and territorial claim.`;
+        document.getElementById("swatches").innerHTML = pal
+          .map((x) => `<span class="swatch" style="background:${x}"></span>`)
+          .join("");
+        document.getElementById("paletteNote").textContent =
+          `Primary ${base}, field contrast ${dark}, charge metal ${metal}, accent ${accent}.`;
+        document.getElementById("rules").textContent =
+          `Charge: ${charge}. Division: ${division}. Complexity ${complex}/5. ${c.supporters.checked ? "Supporters enabled for ceremonial display." : "Minimal arms without supporters."}`;
+        renderMini(rng, pal, charge);
+        log(
+          "Heraldry generated",
+          `${house}, ${division}, ${charge}, ${pal.length} tinctures`,
+        );
+        log("Render complete", `${(performance.now() - started).toFixed(1)}ms`);
+      }
+      function renderMini(rng, pal, charge) {
+        const count = Number(c.variants.value);
+        document.getElementById("miniGallery").innerHTML = Array.from(
+          { length: count },
+          (_, i) => {
+            const div = rng.pick(divisions),
+              a = pal[i % pal.length],
+              b = pal[(i + 2) % pal.length],
+              ch = chargeSvg(
+                i % 2 ? charge : rng.pick(charges),
+                pal[(i + 1) % pal.length],
+                150,
+                112,
+                0.38,
+              );
+            return `<div class="mini"><svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="180" fill="${a}"/>${div === "per-pale" ? `<rect x="150" width="150" height="180" fill="${b}"/>` : div === "cross" ? `<rect x="130" width="40" height="180" fill="${b}"/><rect y="70" width="300" height="40" fill="${b}"/>` : div === "bend" ? `<path d="M-20 160L40 200 320 20 260-20z" fill="${b}"/>` : `<path d="M0 90H300V180H0z" fill="${b}" opacity=".75"/>`}${ch}</svg></div>`;
+          },
+        ).join("");
+      }
+      function downloadSvg() {
+        const blob = new Blob([currentSvg], { type: "image/svg+xml" }),
+          a = document.createElement("a");
+        a.download = `${c.seed.value || "heraldry"}.svg`;
+        a.href = URL.createObjectURL(blob);
+        a.click();
+        URL.revokeObjectURL(a.href);
+        log("Exported SVG", a.download);
+      }
+      function downloadPng() {
+        const img = new Image(),
+          url =
+            "data:image/svg+xml;charset=utf-8," +
+            encodeURIComponent(currentSvg);
+        img.onload = () => {
+          const cnv = document.createElement("canvas");
+          cnv.width = 1200;
+          cnv.height = 1520;
+          const x = cnv.getContext("2d");
+          x.fillStyle = "#111827";
+          x.fillRect(0, 0, cnv.width, cnv.height);
+          x.drawImage(img, 0, 0, cnv.width, cnv.height);
+          const a = document.createElement("a");
+          a.download = `${c.seed.value || "heraldry"}.png`;
+          a.href = cnv.toDataURL("image/png");
+          a.click();
+          log("Exported PNG", a.download);
+        };
+        img.src = url;
+      }
+      document.getElementById("generate").addEventListener("click", generate);
+      document
+        .getElementById("randomize")
+        .addEventListener("click", randomSeed);
+      document
+        .getElementById("downloadSvg")
+        .addEventListener("click", downloadSvg);
+      document
+        .getElementById("downloadPng")
+        .addEventListener("click", downloadPng);
+      document
+        .getElementById("clearLog")
+        .addEventListener("click", () => (logEl.textContent = ""));
+      Object.values(c).forEach((el) => el.addEventListener("input", generate));
+      sync();
+      generate();
+    </script>
+  </body>
+</html>
