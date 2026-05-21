@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Procedural City Generator - Idea Lab</title>
+    <style>
+      :root {
+        --bg: #040b16;
+        --panel: rgba(15, 23, 42, 0.86);
+        --line: rgba(148, 163, 184, 0.24);
+        --text: #f8fafc;
+        --muted: #a8b4c7;
+        --accent: #38bdf8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font-family: Inter, system-ui, sans-serif;
+        background:
+          radial-gradient(
+            circle at 20% 12%,
+            rgba(56, 189, 248, 0.18),
+            transparent 30%
+          ),
+          linear-gradient(135deg, #020617, #0f172a 55%, #111827);
+      }
+      .page {
+        width: min(1400px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 24px 0 36px;
+      }
+      .back {
+        color: #7dd3fc;
+        text-decoration: none;
+        font-weight: 800;
+      }
+      .layout {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 18px;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--panel);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.36);
+      }
+      .controls {
+        padding: 18px;
+        position: sticky;
+        top: 12px;
+      }
+      label {
+        display: block;
+        margin: 10px 0 6px;
+        font-size: 0.75rem;
+        color: #cbd5e1;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      input,
+      select,
+      button {
+        width: 100%;
+        border-radius: 12px;
+        font: inherit;
+      }
+      input,
+      select {
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(2, 6, 23, 0.65);
+        color: var(--text);
+        padding: 10px;
+      }
+      input[type="range"] {
+        padding: 0;
+        accent-color: var(--accent);
+      }
+      button {
+        border: 0;
+        padding: 11px 12px;
+        font-weight: 900;
+        cursor: pointer;
+        color: #04111f;
+        background: linear-gradient(135deg, #38bdf8, #a78bfa);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .value {
+        color: var(--muted);
+        font-size: 0.78rem;
+        text-align: right;
+      }
+      .stage {
+        overflow: hidden;
+      }
+      .canvas-wrap {
+        min-height: 720px;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        background: #020617;
+        border-radius: 20px 20px 0 0;
+      }
+      canvas {
+        width: 100%;
+        max-width: 980px;
+        aspect-ratio: 1/1;
+        border-radius: 14px;
+        background: #020617;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1px;
+        background: var(--line);
+      }
+      .metric {
+        background: rgba(15, 23, 42, 0.82);
+        padding: 14px;
+      }
+      .metric span {
+        display: block;
+        font-size: 0.7rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 900;
+      }
+      .metric strong {
+        display: block;
+        margin-top: 6px;
+      }
+      .log {
+        margin-top: 14px;
+        padding: 14px;
+        border-top: 1px solid var(--line);
+        color: #a7f3d0;
+        font:
+          12px/1.45 ui-monospace,
+          monospace;
+        max-height: 150px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .controls {
+          position: static;
+        }
+        .metrics {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <a class="back" href="../index.html">← Back to Idea Lab</a>
+      <h1>🏙️ Procedural City Generator</h1>
+      <div class="layout">
+        <aside class="panel controls">
+          <label for="seed">Seed</label
+          ><input id="seed" value="arc-light-204" />
+          <label for="layoutType">Layout</label>
+          <select id="layoutType">
+            <option value="organic">Organic</option>
+            <option value="grid">Grid</option>
+            <option value="radial">Radial</option>
+          </select>
+          <label for="districts">District count</label
+          ><input id="districts" type="range" min="6" max="24" value="14" />
+          <div class="value" id="districtsV"></div>
+          <label for="river">River strength</label
+          ><input
+            id="river"
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value="0.45"
+          />
+          <div class="value" id="riverV"></div>
+          <label for="density">Road density</label
+          ><input
+            id="density"
+            type="range"
+            min="0.25"
+            max="1.2"
+            step="0.05"
+            value="0.8"
+          />
+          <div class="value" id="densityV"></div>
+          <div class="row" style="margin-top: 12px">
+            <button id="generate">Generate</button
+            ><button id="randomize">Random Seed</button>
+          </div>
+          <button id="download" style="margin-top: 10px">Download PNG</button>
+        </aside>
+        <section class="panel stage">
+          <div class="canvas-wrap">
+            <canvas id="map" width="920" height="920"></canvas>
+          </div>
+          <div class="metrics">
+            <div class="metric">
+              <span>Districts</span><strong id="mDistricts">—</strong>
+            </div>
+            <div class="metric">
+              <span>Arterials</span><strong id="mRoads">—</strong>
+            </div>
+            <div class="metric">
+              <span>Parks</span><strong id="mParks">—</strong>
+            </div>
+            <div class="metric">
+              <span>Landmarks</span><strong id="mLandmarks">—</strong>
+            </div>
+          </div>
+          <pre class="log" id="log"></pre>
+        </section>
+      </div>
+    </main>
+    <script>
+      const canvas = document.getElementById("map");
+      const ctx = canvas.getContext("2d");
+      const log = document.getElementById("log");
+      const controls = ["districts", "river", "density"].map((id) =>
+        document.getElementById(id),
+      );
+      function hash(s) {
+        let h = 2166136261 >>> 0;
+        for (let i = 0; i < s.length; i++) {
+          h ^= s.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        return h >>> 0;
+      }
+      class RNG {
+        constructor(seed) {
+          this.s = hash(seed || "seed");
+        }
+        next() {
+          let t = (this.s += 0x6d2b79f5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        }
+        range(a, b) {
+          return a + (b - a) * this.next();
+        }
+        int(a, b) {
+          return Math.floor(this.range(a, b + 1));
+        }
+      }
+      const roadColor = "#93c5fd";
+      function updateLabels() {
+        districtsV.textContent = districts.value;
+        riverV.textContent = Number(river.value).toFixed(2);
+        densityV.textContent = Number(density.value).toFixed(2);
+      }
+      function write(msg) {
+        log.textContent =
+          `[${new Date().toLocaleTimeString()}] ${msg}\n` + log.textContent;
+      }
+      function generate() {
+        updateLabels();
+        const seedVal = seed.value.trim() || "city";
+        const rng = new RNG(seedVal + ":" + layoutType.value);
+        const n = Number(districts.value);
+        const riverStrength = Number(river.value);
+        const densityV = Number(density.value);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#061322";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // river
+        if (riverStrength > 0.05) {
+          ctx.strokeStyle = "rgba(56,189,248,.9)";
+          ctx.lineWidth = 18 * riverStrength + 6;
+          ctx.beginPath();
+          for (let x = 0; x <= canvas.width; x += 8) {
+            const y =
+              canvas.height * 0.52 +
+              Math.sin(x * 0.008 + rng.range(0, 6)) * 90 * riverStrength +
+              Math.sin(x * 0.021) * 42 * riverStrength;
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+        // districts as tinted cells
+        const centers = [];
+        for (let i = 0; i < n; i++) {
+          const a = rng.range(0, Math.PI * 2),
+            r = rng.range(90, canvas.width * 0.45);
+          centers.push({
+            x: canvas.width / 2 + Math.cos(a) * r,
+            y: canvas.height / 2 + Math.sin(a) * r,
+            color: `hsl(${Math.floor(rng.range(160, 260))} 34% ${Math.floor(rng.range(18, 32))}%)`,
+          });
+        }
+        const step = 10;
+        for (let y = 0; y < canvas.height; y += step) {
+          for (let x = 0; x < canvas.width; x += step) {
+            let best = 1e9,
+              idx = 0;
+            for (let i = 0; i < centers.length; i++) {
+              const dx = x - centers[i].x,
+                dy = y - centers[i].y;
+              const d = dx * dx + dy * dy;
+              if (d < best) {
+                best = d;
+                idx = i;
+              }
+            }
+            ctx.fillStyle = centers[idx].color;
+            ctx.fillRect(x, y, step, step);
+          }
+        }
+        // roads
+        let roads = 0;
+        ctx.strokeStyle = roadColor;
+        ctx.globalAlpha = 0.8;
+        ctx.lineWidth = 2;
+        if (layoutType.value === "grid") {
+          const space = Math.max(24, Math.floor(58 / densityV));
+          for (let x = 0; x < canvas.width; x += space) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+            ctx.stroke();
+            roads++;
+          }
+          for (let y = 0; y < canvas.height; y += space) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+            roads++;
+          }
+        } else if (layoutType.value === "radial") {
+          const rays = Math.floor(10 * densityV + 8);
+          for (let i = 0; i < rays; i++) {
+            const a = (i / rays) * Math.PI * 2 + rng.range(-0.06, 0.06);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, canvas.height / 2);
+            ctx.lineTo(
+              canvas.width / 2 + Math.cos(a) * canvas.width,
+              canvas.height / 2 + Math.sin(a) * canvas.height,
+            );
+            ctx.stroke();
+            roads++;
+          }
+          for (
+            let r = 90;
+            r < canvas.width * 0.47;
+            r += Math.max(28, 70 / densityV)
+          ) {
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, r, 0, Math.PI * 2);
+            ctx.stroke();
+            roads++;
+          }
+        } else {
+          const paths = Math.floor(20 * densityV + 12);
+          for (let i = 0; i < paths; i++) {
+            let x = rng.range(0, canvas.width),
+              y = rng.range(0, canvas.height);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            for (let s = 0; s < rng.int(20, 60); s++) {
+              x += rng.range(-22, 22);
+              y += rng.range(-22, 22);
+              ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            roads++;
+          }
+        }
+        ctx.globalAlpha = 1;
+        // parks + landmarks
+        let parks = 0,
+          landmarks = 0;
+        for (let i = 0; i < n; i++) {
+          if (rng.next() < 0.26) {
+            ctx.fillStyle = "rgba(34,197,94,.5)";
+            const w = rng.range(24, 70),
+              h = rng.range(24, 70);
+            ctx.fillRect(centers[i].x - w / 2, centers[i].y - h / 2, w, h);
+            parks++;
+          }
+          if (rng.next() < 0.15) {
+            ctx.fillStyle = "rgba(251,191,36,.94)";
+            ctx.beginPath();
+            ctx.arc(centers[i].x, centers[i].y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            landmarks++;
+          }
+        }
+        mDistricts.textContent = n;
+        mRoads.textContent = roads;
+        mParks.textContent = parks;
+        mLandmarks.textContent = landmarks;
+        write(
+          `Generated ${layoutType.value} city seed=${seedVal}, districts=${n}, roads=${roads}`,
+        );
+      }
+      function randomSeed() {
+        const rng = new RNG(String(Date.now()));
+        const a = ["arc", "neo", "cobalt", "ember", "harbor", "opal"];
+        const b = ["delta", "spire", "ward", "cross", "axis", "market"];
+        seed.value = `${a[rng.int(0, a.length - 1)]}-${b[rng.int(0, b.length - 1)]}-${rng.int(100, 999)}`;
+        generate();
+      }
+      generate.addEventListener("click", generate);
+      randomize.addEventListener("click", randomSeed);
+      controls.forEach((el) => el.addEventListener("input", generate));
+      layoutType.addEventListener("change", generate);
+      seed.addEventListener("change", generate);
+      download.addEventListener("click", () => {
+        const a = document.createElement("a");
+        a.download = `${seed.value || "city"}.png`;
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      });
+      updateLabels();
+      generate();
+    </script>
+  </body>
+</html>

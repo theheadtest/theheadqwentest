@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ecosystem Balance Lab - Idea Lab</title>
+    <style>
+      :root {
+        --bg: #031013;
+        --panel: rgba(6, 24, 30, 0.88);
+        --line: rgba(125, 211, 252, 0.24);
+        --text: #f0fdfa;
+        --muted: #99aeb8;
+        --acc: #34d399;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: var(--text);
+        font-family: Inter, system-ui, sans-serif;
+        background:
+          radial-gradient(
+            circle at 16% 10%,
+            rgba(52, 211, 153, 0.18),
+            transparent 32%
+          ),
+          linear-gradient(130deg, #031013, #0c1d24);
+      }
+      .page {
+        width: min(1420px, calc(100% - 24px));
+        margin: 0 auto;
+        padding: 22px 0 30px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 18px;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+      }
+      .controls {
+        padding: 14px;
+        position: sticky;
+        top: 10px;
+      }
+      label {
+        display: block;
+        margin: 10px 0 5px;
+        font-size: 0.72rem;
+        color: #c6e3eb;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      input,
+      button {
+        width: 100%;
+        border-radius: 10px;
+        font: inherit;
+      }
+      input {
+        padding: 9px;
+        border: 1px solid rgba(125, 211, 252, 0.3);
+        background: rgba(2, 10, 14, 0.6);
+        color: var(--text);
+      }
+      input[type="range"] {
+        padding: 0;
+        accent-color: var(--acc);
+      }
+      button {
+        border: 0;
+        padding: 10px;
+        font-weight: 900;
+        cursor: pointer;
+        color: #04211a;
+        background: linear-gradient(135deg, #34d399, #22d3ee);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .canvas-wrap {
+        padding: 12px;
+        background: #020b0e;
+        border-radius: 18px 18px 0 0;
+      }
+      .world {
+        width: 100%;
+        max-width: 960px;
+        aspect-ratio: 3/2;
+        border-radius: 12px;
+        background: #020b0e;
+        image-rendering: pixelated;
+      }
+      .chart {
+        width: 100%;
+        max-width: 960px;
+        aspect-ratio: 3/1;
+        background: #030f14;
+        border-radius: 12px;
+        margin-top: 10px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1px;
+        background: var(--line);
+      }
+      .metric {
+        background: #072029;
+        padding: 11px;
+      }
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+      }
+      .metric strong {
+        display: block;
+        margin-top: 6px;
+      }
+      .log {
+        padding: 10px;
+        color: #86efac;
+        font:
+          12px/1.45 ui-monospace,
+          monospace;
+        max-height: 150px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .controls {
+          position: static;
+        }
+        .metrics {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <a
+        href="../index.html"
+        style="color: #67e8f9; text-decoration: none; font-weight: 800"
+        >← Back to Idea Lab</a
+      >
+      <h1>📈 Ecosystem Balance Lab</h1>
+      <div class="layout">
+        <aside class="panel controls">
+          <label for="seed">Seed</label
+          ><input id="seed" value="moss-7341" /><label>Grass growth</label
+          ><input
+            id="grass"
+            type="range"
+            min="0.001"
+            max="0.08"
+            step="0.001"
+            value="0.024"
+          /><label>Forest spread</label
+          ><input
+            id="forest"
+            type="range"
+            min="0.001"
+            max="0.05"
+            step="0.001"
+            value="0.015"
+          /><label>Rabbit birth chance</label
+          ><input
+            id="rabbitBirth"
+            type="range"
+            min="0.01"
+            max="0.25"
+            step="0.01"
+            value="0.10"
+          /><label>Fox birth chance</label
+          ><input
+            id="foxBirth"
+            type="range"
+            min="0.005"
+            max="0.12"
+            step="0.005"
+            value="0.045"
+          /><label>Lightning chance</label
+          ><input
+            id="lightning"
+            type="range"
+            min="0"
+            max="0.01"
+            step="0.0005"
+            value="0.0015"
+          />
+          <div class="row" style="margin-top: 12px">
+            <button id="toggle">Pause</button><button id="step">Step</button>
+          </div>
+          <div class="row" style="margin-top: 8px">
+            <button id="regen">Regenerate</button
+            ><button id="randomize">Random Seed</button>
+          </div>
+        </aside>
+        <section class="panel">
+          <div class="canvas-wrap">
+            <canvas id="world" class="world" width="210" height="140"></canvas
+            ><canvas id="chart" class="chart" width="840" height="280"></canvas>
+          </div>
+          <div class="metrics">
+            <div class="metric">
+              <span>Tick</span><strong id="mTick">—</strong>
+            </div>
+            <div class="metric">
+              <span>Grass</span><strong id="mGrass">—</strong>
+            </div>
+            <div class="metric">
+              <span>Forest</span><strong id="mForest">—</strong>
+            </div>
+            <div class="metric">
+              <span>Rabbits</span><strong id="mRabbit">—</strong>
+            </div>
+            <div class="metric">
+              <span>Foxes</span><strong id="mFox">—</strong>
+            </div>
+          </div>
+          <pre id="log" class="log"></pre>
+        </section>
+      </div>
+    </main>
+    <script>
+      const world = document.getElementById("world"),
+        wctx = world.getContext("2d");
+      const chart = document.getElementById("chart"),
+        cctx = chart.getContext("2d");
+      const W = world.width,
+        H = world.height,
+        N = W * H;
+      const T = {
+        SOIL: 0,
+        GRASS: 1,
+        FOREST: 2,
+        WATER: 3,
+        RABBIT: 4,
+        FOX: 5,
+        FIRE: 6,
+        ASH: 7,
+      };
+      const C = [
+        "#0f2a1e",
+        "#34d399",
+        "#15803d",
+        "#2563eb",
+        "#f8fafc",
+        "#f97316",
+        "#ef4444",
+        "#57534e",
+      ];
+      let grid = new Uint8Array(N),
+        energy = new Uint8Array(N),
+        age = new Uint8Array(N),
+        tick = 0,
+        running = true,
+        hist = [];
+      function h(s) {
+        let x = 2166136261 >>> 0;
+        for (let i = 0; i < s.length; i++) {
+          x ^= s.charCodeAt(i);
+          x = Math.imul(x, 16777619);
+        }
+        return x >>> 0;
+      }
+      class RNG {
+        constructor(seed) {
+          this.s = h(seed);
+        }
+        next() {
+          let t = (this.s += 0x6d2b79f5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        }
+        int(a, b) {
+          return Math.floor(a + (b - a + 1) * this.next());
+        }
+      }
+      let rng = new RNG(seed.value);
+      const idx = (x, y) => y * W + x;
+      const inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
+      const near = (arr, x, y, t) => {
+        let c = 0;
+        for (let oy = -1; oy <= 1; oy++)
+          for (let ox = -1; ox <= 1; ox++) {
+            if (!ox && !oy) continue;
+            const nx = x + ox,
+              ny = y + oy;
+            if (inb(nx, ny) && arr[idx(nx, ny)] === t) c++;
+          }
+        return c;
+      };
+      function write(msg) {
+        log.textContent =
+          `[${new Date().toLocaleTimeString()}] ${msg}\n` + log.textContent;
+      }
+      function regen() {
+        rng = new RNG(seed.value || "eco");
+        grid.fill(T.SOIL);
+        energy.fill(0);
+        age.fill(0);
+        tick = 0;
+        hist = [];
+        for (let y = 0; y < H; y++)
+          for (let x = 0; x < W; x++) {
+            const i = idx(x, y);
+            const n =
+              Math.sin((x * 13 + y * 7 + rng.next() * 90) * 0.07) * 0.5 + 0.5;
+            if (
+              Math.abs(y - H * 0.55 - Math.sin(x * 0.08) * 14) < 2 ||
+              n < 0.22
+            )
+              grid[i] = T.WATER;
+            else if (n > 0.74) grid[i] = T.FOREST;
+            else if (n > 0.45) grid[i] = T.GRASS;
+          }
+        sprinkle(T.RABBIT, 92, 20);
+        sprinkle(T.FOX, 24, 30);
+        write("Regenerated ecosystem");
+        render();
+        stats();
+      }
+      function sprinkle(t, count, e) {
+        let p = 0;
+        while (p < count) {
+          const x = rng.int(0, W - 1),
+            y = rng.int(0, H - 1),
+            i = idx(x, y);
+          if (grid[i] === T.GRASS || grid[i] === T.SOIL) {
+            grid[i] = t;
+            energy[i] = e;
+            p++;
+          }
+        }
+      }
+      function stepSim() {
+        const growth = Number(grass.value),
+          forestSpread = Number(forest.value),
+          rb = Number(rabbitBirth.value),
+          fb = Number(foxBirth.value),
+          light = Number(lightning.value);
+        const src = grid.slice(),
+          en = energy.slice(),
+          ag = age.slice();
+        const next = src.slice(),
+          nen = en.slice(),
+          nag = ag.slice();
+        for (let y = 0; y < H; y++)
+          for (let x = 0; x < W; x++) {
+            const i = idx(x, y),
+              tile = src[i];
+            nag[i] = Math.min(255, ag[i] + 1);
+            if (tile === T.SOIL || tile === T.ASH) {
+              const water = near(src, x, y, T.WATER),
+                grassN = near(src, x, y, T.GRASS);
+              if (
+                (water && rng.next() < growth + water * 0.012) ||
+                (grassN >= 2 && rng.next() < growth * 0.5 + grassN * 0.004)
+              )
+                next[i] = T.GRASS;
+            }
+            if (tile === T.GRASS) {
+              const f = near(src, x, y, T.FOREST);
+              if (ag[i] > 18 && f >= 2 && rng.next() < forestSpread)
+                next[i] = T.FOREST;
+              else if (rng.next() < 0.0018 && near(src, x, y, T.WATER) === 0)
+                next[i] = T.SOIL;
+            }
+            if (tile === T.FOREST) {
+              const fire = near(src, x, y, T.FIRE);
+              if (
+                (fire && rng.next() < 0.24) ||
+                (rng.next() < light && near(src, x, y, T.WATER) === 0)
+              )
+                next[i] = T.FIRE;
+            }
+            if (tile === T.FIRE) {
+              if (ag[i] > 3 + rng.int(0, 4)) next[i] = T.ASH;
+            }
+            if (tile === T.RABBIT)
+              moveAnimal(
+                src,
+                en,
+                next,
+                nen,
+                x,
+                y,
+                T.RABBIT,
+                [T.GRASS],
+                [T.GRASS, T.SOIL, T.ASH],
+                34,
+                1,
+                16,
+                rb,
+              );
+            if (tile === T.FOX)
+              moveAnimal(
+                src,
+                en,
+                next,
+                nen,
+                x,
+                y,
+                T.FOX,
+                [T.RABBIT],
+                [T.GRASS, T.SOIL, T.ASH, T.FOREST],
+                42,
+                2,
+                24,
+                fb,
+              );
+          }
+        grid = next;
+        energy = nen;
+        age = nag;
+        tick++;
+      }
+      function find(src, x, y, types) {
+        const opts = [];
+        for (let oy = -1; oy <= 1; oy++)
+          for (let ox = -1; ox <= 1; ox++) {
+            if (!ox && !oy) continue;
+            const nx = x + ox,
+              ny = y + oy;
+            if (!inb(nx, ny)) continue;
+            const i = idx(nx, ny);
+            if (types.includes(src[i])) opts.push([nx, ny, i]);
+          }
+        return opts.length ? opts[rng.int(0, opts.length - 1)] : null;
+      }
+      function moveAnimal(
+        src,
+        en,
+        next,
+        nen,
+        x,
+        y,
+        type,
+        foodTypes,
+        walk,
+        maxE,
+        cost,
+        babyE,
+        birthChance,
+      ) {
+        const i = idx(x, y);
+        if (next[i] !== type) return;
+        let e = (en[i] || babyE) - cost;
+        if (e <= 0) {
+          next[i] = T.SOIL;
+          nen[i] = 0;
+          return;
+        }
+        const food = find(src, x, y, foodTypes),
+          target = food || find(src, x, y, walk);
+        if (!target) {
+          nen[i] = e;
+          return;
+        }
+        const ni = target[2],
+          ate = food && ni === food[2];
+        e = Math.min(maxE, e + (ate ? (type === T.RABBIT ? 11 : 20) : 0));
+        next[i] = type === T.RABBIT ? T.SOIL : T.GRASS;
+        nen[i] = 0;
+        next[ni] = type;
+        nen[ni] = e;
+        if (e > maxE * 0.72 && rng.next() < birthChance) {
+          const n = find(next, target[0], target[1], [T.GRASS, T.SOIL, T.ASH]);
+          if (n) {
+            next[n[2]] = type;
+            nen[n[2]] = babyE;
+            nen[ni] = Math.floor(e * 0.55);
+          }
+        }
+      }
+      function render() {
+        const img = wctx.createImageData(W, H),
+          d = img.data;
+        for (let i = 0; i < N; i++) {
+          const c = C[grid[i]],
+            r = parseInt(c.slice(1, 3), 16),
+            g = parseInt(c.slice(3, 5), 16),
+            b = parseInt(c.slice(5, 7), 16),
+            shade =
+              grid[i] === T.WATER
+                ? Math.sin((i % W) * 0.2 + tick * 0.2) * 10
+                : (Math.sin(i * 0.17) - 0.5) * 8;
+          d[i * 4] = Math.max(0, Math.min(255, r + shade));
+          d[i * 4 + 1] = Math.max(0, Math.min(255, g + shade));
+          d[i * 4 + 2] = Math.max(0, Math.min(255, b + shade));
+          d[i * 4 + 3] = 255;
+        }
+        wctx.putImageData(img, 0, 0);
+      }
+      function stats() {
+        const c = new Map();
+        for (const t of grid) c.set(t, (c.get(t) || 0) + 1);
+        mTick.textContent = tick;
+        mGrass.textContent = c.get(T.GRASS) || 0;
+        mForest.textContent = c.get(T.FOREST) || 0;
+        mRabbit.textContent = c.get(T.RABBIT) || 0;
+        mFox.textContent = c.get(T.FOX) || 0;
+        hist.push({
+          g: c.get(T.GRASS) || 0,
+          f: c.get(T.FOREST) || 0,
+          r: c.get(T.RABBIT) || 0,
+          x: c.get(T.FOX) || 0,
+        });
+        if (hist.length > 220) hist.shift();
+        drawChart();
+      }
+      function drawChart() {
+        cctx.fillStyle = "#030f14";
+        cctx.fillRect(0, 0, chart.width, chart.height);
+        const max = Math.max(
+          1,
+          ...hist.map((h) => Math.max(h.g, h.f, h.r, h.x)),
+        );
+        const draw = (k, col) => {
+          cctx.strokeStyle = col;
+          cctx.lineWidth = 2;
+          cctx.beginPath();
+          hist.forEach((p, i) => {
+            const x =
+              (i / Math.max(1, hist.length - 1)) * (chart.width - 20) + 10;
+            const y = chart.height - 14 - (p[k] / max) * (chart.height - 28);
+            if (i === 0) cctx.moveTo(x, y);
+            else cctx.lineTo(x, y);
+          });
+          cctx.stroke();
+        };
+        draw("g", "#34d399");
+        draw("f", "#15803d");
+        draw("r", "#f8fafc");
+        draw("x", "#f97316");
+      }
+      function frame() {
+        if (running) {
+          for (let i = 0; i < 3; i++) stepSim();
+          render();
+          stats();
+        }
+        requestAnimationFrame(frame);
+      }
+      toggle.addEventListener("click", () => {
+        running = !running;
+        toggle.textContent = running ? "Pause" : "Resume";
+        write(`Simulation ${running ? "resumed" : "paused"}`);
+      });
+      step.addEventListener("click", () => {
+        stepSim();
+        render();
+        stats();
+      });
+      regen.addEventListener("click", regen);
+      randomize.addEventListener("click", () => {
+        const rr = new RNG(String(Date.now()));
+        seed.value = `moss-${rr.int(1000, 9999)}`;
+        regen();
+      });
+      [grass, forest, rabbitBirth, foxBirth, lightning].forEach((el) =>
+        el.addEventListener("input", () =>
+          write(`Parameter tuned: ${el.id}=${el.value}`),
+        ),
+      );
+      seed.addEventListener("change", regen);
+      regen();
+      frame();
+    </script>
+  </body>
+</html>
