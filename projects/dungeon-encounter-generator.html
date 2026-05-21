@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dungeon Encounter Generator - Idea Lab</title>
+    <style>
+      :root {
+        --bg: #09090b;
+        --panel: rgba(24, 24, 27, 0.9);
+        --line: rgba(161, 161, 170, 0.25);
+        --text: #fafafa;
+        --muted: #a1a1aa;
+        --acc: #f59e0b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: var(--text);
+        font-family: Inter, system-ui, sans-serif;
+        background:
+          radial-gradient(
+            circle at 18% 10%,
+            rgba(245, 158, 11, 0.18),
+            transparent 30%
+          ),
+          linear-gradient(130deg, #09090b, #111827);
+      }
+      .page {
+        width: min(1360px, calc(100% - 24px));
+        margin: 0 auto;
+        padding: 20px 0 30px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 16px;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel);
+      }
+      .controls {
+        padding: 14px;
+        position: sticky;
+        top: 10px;
+      }
+      label {
+        display: block;
+        margin: 10px 0 6px;
+        font-size: 0.74rem;
+        color: #d4d4d8;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      input,
+      select,
+      button {
+        width: 100%;
+        border-radius: 10px;
+        font: inherit;
+      }
+      input,
+      select {
+        padding: 9px;
+        border: 1px solid rgba(161, 161, 170, 0.3);
+        background: rgba(9, 9, 11, 0.7);
+        color: var(--text);
+      }
+      button {
+        padding: 10px;
+        border: 0;
+        background: linear-gradient(135deg, #f59e0b, #f97316);
+        font-weight: 900;
+        color: #1c1917;
+        cursor: pointer;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .canvas-wrap {
+        padding: 12px;
+        background: #050505;
+        border-radius: 16px 16px 0 0;
+      }
+      .canvas {
+        width: 100%;
+        max-width: 900px;
+        aspect-ratio: 1/1;
+        image-rendering: pixelated;
+        border-radius: 10px;
+        background: #000;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1px;
+        background: var(--line);
+      }
+      .metric {
+        background: #18181b;
+        padding: 11px;
+      }
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+      }
+      .metric strong {
+        display: block;
+        margin-top: 6px;
+      }
+      .log {
+        margin-top: 10px;
+        padding: 10px;
+        color: #fde68a;
+        font:
+          12px/1.45 ui-monospace,
+          monospace;
+        max-height: 140px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .controls {
+          position: static;
+        }
+        .metrics {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <a
+        href="../index.html"
+        style="color: #fbbf24; text-decoration: none; font-weight: 800"
+        >← Back to Idea Lab</a
+      >
+      <h1>🕯️ Dungeon Encounter Generator</h1>
+      <div class="layout">
+        <aside class="panel controls">
+          <label for="seed">Seed</label
+          ><input id="seed" value="crypt-197" /><label for="rooms"
+            >Room count</label
+          ><input id="rooms" type="range" min="8" max="40" value="18" /><label
+            for="style"
+            >Layout style</label
+          ><select id="style">
+            <option value="bsp">BSP Rooms</option>
+            <option value="maze">Maze Hybrid</option>
+            <option value="cave">Cave + Rooms</option>
+          </select>
+          <div class="row" style="margin-top: 12px">
+            <button id="generateBtn">Generate</button
+            ><button id="randomize">Random</button>
+          </div>
+          <button id="download" style="margin-top: 8px">Download PNG</button>
+          <h3 style="margin: 14px 0 8px">Encounter Summary</h3>
+          <div id="summary" style="color: #d4d4d8; line-height: 1.45"></div>
+        </aside>
+        <section class="panel">
+          <div class="canvas-wrap">
+            <canvas id="cv" class="canvas" width="192" height="192"></canvas>
+          </div>
+          <div class="metrics">
+            <div class="metric">
+              <span>Rooms</span><strong id="mRooms">—</strong>
+            </div>
+            <div class="metric">
+              <span>Corridors</span><strong id="mCorridors">—</strong>
+            </div>
+            <div class="metric">
+              <span>Enemies</span><strong id="mEnemies">—</strong>
+            </div>
+            <div class="metric">
+              <span>Treasure</span><strong id="mTreasure">—</strong>
+            </div>
+          </div>
+          <pre class="log" id="log"></pre>
+        </section>
+      </div>
+    </main>
+    <script>
+      const cv = document.getElementById("cv"),
+        ctx = cv.getContext("2d");
+      function h(s) {
+        let x = 2166136261 >>> 0;
+        for (let i = 0; i < s.length; i++) {
+          x ^= s.charCodeAt(i);
+          x = Math.imul(x, 16777619);
+        }
+        return x >>> 0;
+      }
+      class RNG {
+        constructor(seed) {
+          this.s = h(seed);
+        }
+        next() {
+          let t = (this.s += 0x6d2b79f5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        }
+        int(a, b) {
+          return Math.floor(a + (b - a + 1) * this.next());
+        }
+        pick(a) {
+          return a[this.int(0, a.length - 1)];
+        }
+      }
+      const W = cv.width,
+        H = cv.height;
+      let grid = new Uint8Array(W * H);
+      const idx = (x, y) => y * W + x;
+      const inb = (x, y) => x >= 1 && y >= 1 && x < W - 1 && y < H - 1;
+      function log(msg) {
+        document.getElementById("log").textContent =
+          `[${new Date().toLocaleTimeString()}] ${msg}\n` +
+          document.getElementById("log").textContent;
+      }
+      function carveRoom(x, y, w, h) {
+        for (let yy = y; yy < y + h; yy++)
+          for (let xx = x; xx < x + w; xx++)
+            if (inb(xx, yy)) grid[idx(xx, yy)] = 1;
+      }
+      function corridor(x1, y1, x2, y2) {
+        let x = x1,
+          y = y1,
+          c = 0;
+        while (x !== x2) {
+          grid[idx(x, y)] = 1;
+          x += x < x2 ? 1 : -1;
+          c++;
+        }
+        while (y !== y2) {
+          grid[idx(x, y)] = 1;
+          y += y < y2 ? 1 : -1;
+          c++;
+        }
+        return c;
+      }
+      function gen() {
+        const seed = document.getElementById("seed").value || "dungeon";
+        const rng = new RNG(seed + style.value);
+        const target = Number(rooms.value);
+        grid.fill(0);
+        const rs = [];
+        let corridors = 0;
+        for (let i = 0; i < target * 2 && rs.length < target; i++) {
+          const rw = rng.int(8, 20),
+            rh = rng.int(8, 20),
+            rx = rng.int(2, W - rw - 3),
+            ry = rng.int(2, H - rh - 3);
+          let overlap = false;
+          for (const r of rs) {
+            if (
+              !(
+                rx + rw + 2 < r.x ||
+                r.x + r.w + 2 < rx ||
+                ry + rh + 2 < r.y ||
+                r.y + r.h + 2 < ry
+              )
+            ) {
+              overlap = true;
+              break;
+            }
+          }
+          if (!overlap) {
+            carveRoom(rx, ry, rw, rh);
+            rs.push({
+              x: rx,
+              y: ry,
+              w: rw,
+              h: rh,
+              cx: Math.floor(rx + rw / 2),
+              cy: Math.floor(ry + rh / 2),
+            });
+          }
+        }
+        for (let i = 1; i < rs.length; i++) {
+          const a = rs[i - 1],
+            b = rs[i];
+          corridors += corridor(a.cx, a.cy, b.cx, b.cy);
+        }
+        if (style.value === "maze") {
+          for (let y = 2; y < H - 2; y += 4)
+            for (let x = 2; x < W - 2; x += 4)
+              if (rng.next() < 0.22) {
+                for (let s = 0; s < rng.int(6, 18); s++) {
+                  const d = rng.pick([
+                    [1, 0],
+                    [-1, 0],
+                    [0, 1],
+                    [0, -1],
+                  ]);
+                  if (inb(x + d[0], y + d[1])) {
+                    x += d[0];
+                    y += d[1];
+                    grid[idx(x, y)] = 1;
+                  }
+                }
+              }
+        }
+        if (style.value === "cave") {
+          for (let y = 1; y < H - 1; y++)
+            for (let x = 1; x < W - 1; x++)
+              if (rng.next() < 0.08) grid[idx(x, y)] = 1;
+        }
+        const enemies = rng.int(rs.length, rs.length * 2 + 4),
+          treasure = rng.int(
+            Math.max(1, Math.floor(rs.length / 3)),
+            Math.max(2, Math.floor(rs.length / 2) + 1),
+          );
+        render(rs, rng);
+        mRooms.textContent = rs.length;
+        mCorridors.textContent = corridors;
+        mEnemies.textContent = enemies;
+        mTreasure.textContent = treasure;
+        summary.innerHTML = `<strong>Goal:</strong> Clear ${rng.pick(["ancient shrine", "bandit hold", "necromancer archive", "forgotten vault"])}.<br><strong>Boss Room:</strong> ${rng.pick(["western crypt", "sunken chapel", "obsidian chamber"])}.<br><strong>Hooks:</strong> ${rng.pick(["Locked gate requires brass key.", "Cursed relic drains healing.", "Prisoners can reveal a shortcut."])}`;
+        log(`Generated ${style.value} dungeon seed=${seed} rooms=${rs.length}`);
+      }
+      function render(rs, rng) {
+        const img = ctx.createImageData(W, H),
+          d = img.data;
+        for (let y = 0; y < H; y++)
+          for (let x = 0; x < W; x++) {
+            const i = idx(x, y) * 4;
+            const floor = grid[idx(x, y)] === 1;
+            if (floor) {
+              const v = 45 + Math.floor(rng.next() * 35);
+              d[i] = v;
+              d[i + 1] = v;
+              d[i + 2] = v + 6;
+            } else {
+              d[i] = 5;
+              d[i + 1] = 7;
+              d[i + 2] = 10;
+            }
+            d[i + 3] = 255;
+          }
+        ctx.putImageData(img, 0, 0);
+        ctx.save();
+        ctx.scale(W / 192, H / 192);
+        ctx.restore();
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(cv, 0, 0);
+        for (const r of rs) {
+          ctx.fillStyle = "rgba(245,158,11,.85)";
+          ctx.fillRect(r.cx - 1, r.cy - 1, 3, 3);
+        }
+      }
+      function rnd() {
+        const a = ["crypt", "ashen", "gloom", "sunken", "obsidian"];
+        const b = ["vault", "labyrinth", "halls", "catacomb", "spire"];
+        const rr = new RNG(String(Date.now()));
+        seed.value = `${rr.pick(a)}-${rr.pick(b)}-${rr.int(100, 999)}`;
+        gen();
+      }
+      generateBtn.addEventListener("click", gen);
+      randomize.addEventListener("click", rnd);
+      rooms.addEventListener("input", gen);
+      style.addEventListener("change", gen);
+      seed.addEventListener("change", gen);
+      download.addEventListener("click", () => {
+        const a = document.createElement("a");
+        a.download = `${seed.value || "dungeon"}.png`;
+        a.href = cv.toDataURL("image/png");
+        a.click();
+      });
+      gen();
+    </script>
+  </body>
+</html>

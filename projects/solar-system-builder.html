@@ -1,0 +1,962 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Procedural Solar System Builder - Idea Lab</title>
+    <style>
+      :root {
+        --bg: #030712;
+        --panel: rgba(15, 23, 42, 0.82);
+        --panel-2: rgba(30, 41, 59, 0.72);
+        --line: rgba(148, 163, 184, 0.22);
+        --text: #f8fafc;
+        --muted: #a8b4c7;
+        --accent: #38bdf8;
+        --accent-2: #a78bfa;
+        --good: #86efac;
+        --warn: #fbbf24;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background:
+          radial-gradient(
+            circle at 20% 8%,
+            rgba(56, 189, 248, 0.18),
+            transparent 30%
+          ),
+          radial-gradient(
+            circle at 80% 14%,
+            rgba(167, 139, 250, 0.22),
+            transparent 34%
+          ),
+          radial-gradient(
+            circle at 50% 105%,
+            rgba(14, 165, 233, 0.12),
+            transparent 34%
+          ),
+          var(--bg);
+      }
+      .page {
+        width: min(1480px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 24px 0 38px;
+      }
+      .back-link {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 800;
+        margin-bottom: 18px;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+      header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 18px;
+        align-items: end;
+        margin-bottom: 20px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2.2rem, 5vw, 4.8rem);
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+      }
+      .subtitle {
+        max-width: 880px;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+      .badge {
+        border: 1px solid rgba(56, 189, 248, 0.32);
+        background: rgba(14, 165, 233, 0.1);
+        color: #bae6fd;
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: 0 24px 90px rgba(0, 0, 0, 0.32);
+        backdrop-filter: blur(18px);
+      }
+      .controls {
+        padding: 20px;
+        position: sticky;
+        top: 14px;
+      }
+      .block + .block {
+        margin-top: 18px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+      h2,
+      h3 {
+        margin: 0 0 12px;
+        letter-spacing: -0.025em;
+      }
+      h2 {
+        font-size: 1.1rem;
+      }
+      h3 {
+        font-size: 0.9rem;
+        color: #dbeafe;
+      }
+      label {
+        display: block;
+        margin: 12px 0 7px;
+        color: #cbd5e1;
+        font-size: 0.78rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      input,
+      select,
+      button {
+        width: 100%;
+        border-radius: 13px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        font: inherit;
+      }
+      input,
+      select {
+        color: var(--text);
+        background: rgba(2, 6, 23, 0.72);
+        padding: 11px 12px;
+        outline: none;
+      }
+      input[type="range"] {
+        padding: 0;
+        accent-color: var(--accent);
+      }
+      button {
+        cursor: pointer;
+        border: 0;
+        padding: 12px 14px;
+        color: #04111f;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        font-weight: 950;
+        transition:
+          transform 0.15s ease,
+          filter 0.15s ease;
+      }
+      button:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.08);
+      }
+      button.secondary {
+        color: var(--text);
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.28);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .value-row {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 6px;
+      }
+      .checkline {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #cbd5e1;
+        font-size: 0.9rem;
+        margin-top: 10px;
+      }
+      .checkline input {
+        width: auto;
+        accent-color: var(--accent);
+      }
+      .stage {
+        overflow: hidden;
+      }
+      .canvas-wrap {
+        position: relative;
+        min-height: 700px;
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        border-radius: 22px 22px 0 0;
+        background: #020617;
+      }
+      canvas {
+        width: 100%;
+        max-width: 960px;
+        aspect-ratio: 16 / 10;
+        border-radius: 18px;
+        background: #020617;
+      }
+      .hud {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+      }
+      .metric {
+        padding: 16px;
+        border-right: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 900;
+      }
+      .metric:last-child {
+        border-right: 0;
+      }
+      .metric strong {
+        display: block;
+        color: var(--text);
+        margin-top: 7px;
+        font-size: 1rem;
+        letter-spacing: 0;
+        text-transform: none;
+      }
+      .body-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: 12px;
+        padding: 16px;
+      }
+      .body-card {
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        border-radius: 16px;
+        padding: 12px;
+        min-height: 128px;
+      }
+      .body-card h3 {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .body-card p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.45;
+      }
+      .mini-planet {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        box-shadow:
+          inset -10px -8px 15px rgba(0, 0, 0, 0.45),
+          0 0 18px rgba(125, 211, 252, 0.18);
+        flex: none;
+      }
+      .log-panel {
+        margin-top: 20px;
+        padding: 18px;
+      }
+      .log-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .log {
+        height: 180px;
+        overflow: auto;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(2, 6, 23, 0.72);
+        padding: 12px;
+        color: #b7f7d2;
+        font:
+          12px/1.55 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        white-space: pre-wrap;
+      }
+      @media (max-width: 980px) {
+        header,
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .controls {
+          position: static;
+        }
+        .hud {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .canvas-wrap {
+          min-height: 520px;
+        }
+      }
+      @media (max-width: 560px) {
+        .page {
+          width: min(100% - 18px, 1480px);
+        }
+        .row,
+        .hud {
+          grid-template-columns: 1fr;
+        }
+        .canvas-wrap {
+          min-height: 360px;
+          padding: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <a class="back-link" href="../index.html">← Back to Idea Lab</a>
+      <header>
+        <div>
+          <h1>🪐 Solar System Builder</h1>
+          <p class="subtitle">
+            Generate a complete stylized star system from one seed: star class,
+            habitable zone, orbital architecture, moons, belts, planet traits,
+            animated orbits, and a mission-style diagnostics log.
+          </p>
+        </div>
+        <div class="badge">Seeded · Canvas 2D · GitHub Pages ready</div>
+      </header>
+      <section class="layout">
+        <aside class="panel controls">
+          <div class="block">
+            <h2>System seed</h2>
+            <label for="seed">Seed</label>
+            <input id="seed" value="kepler-garden-742" spellcheck="false" />
+            <label for="starClass">Star class</label>
+            <select id="starClass">
+              <option value="auto" selected>Auto from seed</option>
+              <option value="M">Red dwarf · M</option>
+              <option value="K">Orange dwarf · K</option>
+              <option value="G">Yellow dwarf · G</option>
+              <option value="F">White star · F</option>
+              <option value="A">Blue-white star · A</option>
+            </select>
+            <div class="row" style="margin-top: 14px">
+              <button id="generate">Generate</button>
+              <button id="randomize" class="secondary">Random Seed</button>
+            </div>
+          </div>
+          <div class="block">
+            <h2>Architecture</h2>
+            <label for="planetCount">Planet count</label>
+            <input id="planetCount" type="range" min="3" max="12" value="8" />
+            <div class="value-row">
+              <span>compact</span><strong id="planetCountValue">8</strong
+              ><span>crowded</span>
+            </div>
+            <label for="beltChance">Belt density</label>
+            <input
+              id="beltChance"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value="0.35"
+            />
+            <div class="value-row">
+              <span>clear</span><strong id="beltChanceValue">0.35</strong
+              ><span>debris rich</span>
+            </div>
+            <label for="animationSpeed">Orbit speed</label>
+            <input
+              id="animationSpeed"
+              type="range"
+              min="0"
+              max="2.5"
+              step="0.05"
+              value="0.75"
+            />
+            <div class="value-row">
+              <span>still</span><strong id="animationSpeedValue">0.75×</strong
+              ><span>fast</span>
+            </div>
+          </div>
+          <div class="block">
+            <h2>Layers</h2>
+            <label class="checkline"
+              ><input id="showLabels" type="checkbox" checked /> Planet
+              labels</label
+            >
+            <label class="checkline"
+              ><input id="showHabitable" type="checkbox" checked /> Habitable
+              zone</label
+            >
+            <label class="checkline"
+              ><input id="showMoons" type="checkbox" checked /> Moon
+              systems</label
+            >
+            <label class="checkline"
+              ><input id="showTrails" type="checkbox" checked /> Orbit
+              trails</label
+            >
+          </div>
+          <div class="block">
+            <h2>Export</h2>
+            <button id="download" class="secondary">Download PNG</button>
+          </div>
+        </aside>
+        <section>
+          <div class="panel stage">
+            <div class="canvas-wrap">
+              <canvas
+                id="system"
+                width="1280"
+                height="800"
+                aria-label="Generated solar system"
+              ></canvas>
+            </div>
+            <div class="hud">
+              <div class="metric">Star<strong id="metricStar">—</strong></div>
+              <div class="metric">
+                Planets<strong id="metricPlanets">—</strong>
+              </div>
+              <div class="metric">
+                Habitable candidates<strong id="metricHabitable">—</strong>
+              </div>
+              <div class="metric">
+                System age<strong id="metricAge">—</strong>
+              </div>
+            </div>
+            <div class="body-grid" id="bodyGrid"></div>
+          </div>
+          <div class="panel log-panel">
+            <div class="log-head">
+              <h2>Generation log</h2>
+              <button
+                id="clearLog"
+                class="secondary"
+                style="width: auto; padding: 8px 11px"
+              >
+                Clear
+              </button>
+            </div>
+            <div id="log" class="log"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script>
+      "use strict";
+      const TAU = Math.PI * 2;
+      const canvas = document.getElementById("system");
+      const ctx = canvas.getContext("2d");
+      const controls = {
+        seed: document.getElementById("seed"),
+        starClass: document.getElementById("starClass"),
+        planetCount: document.getElementById("planetCount"),
+        beltChance: document.getElementById("beltChance"),
+        animationSpeed: document.getElementById("animationSpeed"),
+        showLabels: document.getElementById("showLabels"),
+        showHabitable: document.getElementById("showHabitable"),
+        showMoons: document.getElementById("showMoons"),
+        showTrails: document.getElementById("showTrails"),
+      };
+      const bodyGrid = document.getElementById("bodyGrid");
+      const logEl = document.getElementById("log");
+      let system = null;
+      let last = 0;
+      let simTime = 0;
+      const starTypes = {
+        M: {
+          label: "M red dwarf",
+          color: "#ff8b6b",
+          glow: "#ef4444",
+          mass: [0.12, 0.55],
+          temp: [2400, 3800],
+          hz: [0.18, 0.42],
+          life: "80+ billion years",
+        },
+        K: {
+          label: "K orange dwarf",
+          color: "#ffb86b",
+          glow: "#f97316",
+          mass: [0.55, 0.85],
+          temp: [3900, 5200],
+          hz: [0.42, 0.82],
+          life: "18–34 billion years",
+        },
+        G: {
+          label: "G yellow dwarf",
+          color: "#ffe7a3",
+          glow: "#facc15",
+          mass: [0.85, 1.12],
+          temp: [5300, 6100],
+          hz: [0.82, 1.35],
+          life: "8–12 billion years",
+        },
+        F: {
+          label: "F white star",
+          color: "#f8fbff",
+          glow: "#93c5fd",
+          mass: [1.13, 1.45],
+          temp: [6200, 7500],
+          hz: [1.25, 2.05],
+          life: "2–5 billion years",
+        },
+        A: {
+          label: "A blue-white star",
+          color: "#dbeafe",
+          glow: "#60a5fa",
+          mass: [1.46, 2.2],
+          temp: [7600, 10000],
+          hz: [2.0, 3.35],
+          life: "0.8–2 billion years",
+        },
+      };
+      const palettes = {
+        scorched: ["#32140e", "#9a3412", "#f97316"],
+        desert: ["#7c4a1d", "#c0843f", "#fde68a"],
+        terrestrial: ["#064e3b", "#16a34a", "#38bdf8"],
+        ocean: ["#082f49", "#0284c7", "#67e8f9"],
+        ice: ["#dbeafe", "#93c5fd", "#f8fafc"],
+        gas: ["#7c2d12", "#eab308", "#fed7aa"],
+        giant: ["#312e81", "#7c3aed", "#c4b5fd"],
+        toxic: ["#365314", "#a3e635", "#84cc16"],
+        lava: ["#111827", "#dc2626", "#fbbf24"],
+      };
+      function hash(text) {
+        let h = 2166136261 >>> 0;
+        for (let i = 0; i < text.length; i++) {
+          h ^= text.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        return h >>> 0;
+      }
+      class RNG {
+        constructor(seed) {
+          this.state = hash(seed || "seed");
+        }
+        next() {
+          let t = (this.state += 0x6d2b79f5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        }
+        range(min, max) {
+          return min + (max - min) * this.next();
+        }
+        int(min, max) {
+          return Math.floor(this.range(min, max + 1));
+        }
+        pick(items) {
+          return items[Math.floor(this.next() * items.length)];
+        }
+        chance(p) {
+          return this.next() < p;
+        }
+      }
+      function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+      }
+      function log(title, detail) {
+        const line = `[${new Date().toLocaleTimeString()}] ${title}${detail ? ` — ${detail}` : ""}`;
+        logEl.textContent = `${line}\n${logEl.textContent}`;
+      }
+      function syncLabels() {
+        document.getElementById("planetCountValue").textContent =
+          controls.planetCount.value;
+        document.getElementById("beltChanceValue").textContent = Number(
+          controls.beltChance.value,
+        ).toFixed(2);
+        document.getElementById("animationSpeedValue").textContent =
+          `${Number(controls.animationSpeed.value).toFixed(2)}×`;
+      }
+      function randomSeed() {
+        const a = [
+          "aurora",
+          "kepler",
+          "ember",
+          "atlas",
+          "nova",
+          "lyra",
+          "opal",
+          "umbra",
+          "helio",
+          "zenith",
+        ];
+        const b = [
+          "garden",
+          "forge",
+          "harbor",
+          "choir",
+          "crown",
+          "reef",
+          "frontier",
+          "lantern",
+          "archive",
+          "citadel",
+        ];
+        const rng = new RNG(String(Date.now()));
+        controls.seed.value = `${rng.pick(a)}-${rng.pick(b)}-${rng.int(100, 999)}`;
+        generate();
+      }
+      function generate() {
+        syncLabels();
+        simTime = 0;
+        const rng = new RNG(controls.seed.value.trim() || "solar-system");
+        const keys = Object.keys(starTypes);
+        const key =
+          controls.starClass.value === "auto"
+            ? rng.pick(keys)
+            : controls.starClass.value;
+        const star = starTypes[key];
+        const count = Number(controls.planetCount.value);
+        const mass = rng.range(star.mass[0], star.mass[1]);
+        const age = rng.range(key === "A" ? 0.2 : 0.7, key === "M" ? 11 : 7.5);
+        const temp = Math.round(rng.range(star.temp[0], star.temp[1]));
+        const planets = [];
+        let orbit = rng.range(0.22, 0.42);
+        for (let i = 0; i < count; i++) {
+          orbit += rng.range(0.22, 0.62) * (1 + i * 0.11);
+          const inHz = orbit >= star.hz[0] && orbit <= star.hz[1];
+          const outer = orbit > star.hz[1] * 1.8;
+          let type = inHz
+            ? rng.pick(["terrestrial", "ocean", "terrestrial"])
+            : orbit < star.hz[0] * 0.72
+              ? rng.pick(["scorched", "lava", "desert"])
+              : outer && rng.chance(0.55)
+                ? rng.pick(["gas", "giant", "ice"])
+                : rng.pick(["desert", "ice", "toxic", "terrestrial"]);
+          if (i > count * 0.55 && rng.chance(0.35))
+            type = rng.pick(["gas", "giant"]);
+          const radius =
+            type === "gas" || type === "giant"
+              ? rng.range(13, 24)
+              : rng.range(5.5, 12);
+          const moons =
+            type === "gas" || type === "giant"
+              ? rng.int(3, 9)
+              : rng.chance(0.45)
+                ? rng.int(1, 3)
+                : 0;
+          const water =
+            type === "ocean"
+              ? rng.range(72, 96)
+              : type === "terrestrial"
+                ? rng.range(18, 68)
+                : type === "ice"
+                  ? rng.range(8, 35)
+                  : rng.range(0, 18);
+          const atmosphere = ["gas", "giant"].includes(type)
+            ? "deep bands"
+            : rng.chance(0.68)
+              ? rng.pick(["thin", "temperate", "dense", "hazy"])
+              : "trace";
+          const name = `${rng.pick(["Astra", "Vela", "Nereid", "Orion", "Lumen", "Cinder", "Mira", "Thal", "Eos", "Nyx", "Iris", "Rook"])}-${i + 1}`;
+          planets.push({
+            name,
+            type,
+            orbit,
+            angle: rng.range(0, TAU),
+            speed: rng.range(0.045, 0.17) / Math.sqrt(orbit),
+            radius,
+            moons,
+            water,
+            atmosphere,
+            inHz,
+            tilt: rng.range(-28, 28),
+            colorSeed: rng.next(),
+          });
+          if (
+            rng.chance(Number(controls.beltChance.value)) &&
+            i > 1 &&
+            i < count - 1
+          )
+            orbit += rng.range(0.18, 0.38);
+        }
+        const belts = [];
+        for (let i = 0; i < planets.length - 1; i++)
+          if (
+            planets[i + 1].orbit - planets[i].orbit > 0.75 &&
+            rng.chance(Number(controls.beltChance.value) + 0.18)
+          )
+            belts.push({
+              orbit: (planets[i].orbit + planets[i + 1].orbit) / 2,
+              width: rng.range(0.05, 0.13),
+              rocks: Array.from({ length: 180 }, () => ({
+                a: rng.range(0, TAU),
+                r: rng.range(-1, 1),
+                s: rng.range(0.5, 1.8),
+              })),
+            });
+        system = {
+          seed: controls.seed.value.trim(),
+          key,
+          star,
+          mass,
+          age,
+          temp,
+          planets,
+          belts,
+          hz: star.hz,
+          dust: Array.from({ length: 500 }, () => ({
+            x: rng.next(),
+            y: rng.next(),
+            a: rng.range(0.12, 0.9),
+            s: rng.range(0.4, 1.8),
+          })),
+        };
+        updateMetrics();
+        renderCards();
+        log(
+          "System generated",
+          `${star.label}, ${planets.length} planets, ${belts.length} debris belts`,
+        );
+        log(
+          "Habitable scan",
+          `${planets.filter((p) => p.inHz && ["terrestrial", "ocean"].includes(p.type)).length} promising candidates in conservative zone`,
+        );
+      }
+      function updateMetrics() {
+        document.getElementById("metricStar").textContent =
+          `${system.star.label} · ${system.temp}K`;
+        document.getElementById("metricPlanets").textContent =
+          `${system.planets.length} worlds · ${system.belts.length} belts`;
+        document.getElementById("metricHabitable").textContent =
+          `${system.planets.filter((p) => p.inHz && ["terrestrial", "ocean"].includes(p.type)).length} candidates`;
+        document.getElementById("metricAge").textContent =
+          `${system.age.toFixed(1)} billion years`;
+      }
+      function renderCards() {
+        bodyGrid.innerHTML = system.planets
+          .map((p) => {
+            const colors = palettes[p.type];
+            return `<article class="body-card"><h3><span>${p.name}</span><span class="mini-planet" style="background: radial-gradient(circle at 32% 28%, ${colors[2]}, ${colors[1]} 48%, ${colors[0]} 100%)"></span></h3><p><strong>${p.type}</strong> · ${p.orbit.toFixed(2)} AU · ${p.moons} moons</p><p>${Math.round(p.water)}% volatile coverage · ${p.atmosphere} atmosphere${p.inHz ? " · in habitable zone" : ""}</p></article>`;
+          })
+          .join("");
+      }
+      function draw(time = 0) {
+        const dt = last ? (time - last) / 1000 : 0;
+        last = time;
+        simTime += dt * Number(controls.animationSpeed.value);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!system) {
+          requestAnimationFrame(draw);
+          return;
+        }
+        drawBackground();
+        const cx = canvas.width * 0.5,
+          cy = canvas.height * 0.5;
+        const maxOrbit = Math.max(
+          ...system.planets.map((p) => p.orbit),
+          system.hz[1],
+        );
+        const scale = (Math.min(canvas.width, canvas.height) * 0.43) / maxOrbit;
+        if (controls.showHabitable.checked) drawHabitable(cx, cy, scale);
+        if (controls.showTrails.checked) drawOrbits(cx, cy, scale);
+        drawBelts(cx, cy, scale);
+        drawStar(cx, cy);
+        drawPlanets(cx, cy, scale);
+        requestAnimationFrame(draw);
+      }
+      function drawBackground() {
+        ctx.fillStyle = "#020617";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        for (const s of system.dust) {
+          ctx.globalAlpha = s.a;
+          ctx.fillStyle = "#e0f2fe";
+          ctx.beginPath();
+          ctx.arc(s.x * canvas.width, s.y * canvas.height, s.s, 0, TAU);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+      function drawHabitable(cx, cy, scale) {
+        const inner = system.hz[0] * scale,
+          outer = system.hz[1] * scale;
+        const g = ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
+        g.addColorStop(0, "rgba(34,197,94,0.02)");
+        g.addColorStop(0.45, "rgba(34,197,94,0.14)");
+        g.addColorStop(1, "rgba(34,197,94,0.02)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(cx, cy, outer, 0, TAU);
+        ctx.arc(cx, cy, inner, 0, TAU, true);
+        ctx.fill();
+      }
+      function drawOrbits(cx, cy, scale) {
+        ctx.strokeStyle = "rgba(148,163,184,.24)";
+        ctx.lineWidth = 1;
+        for (const p of system.planets) {
+          ctx.beginPath();
+          ctx.ellipse(
+            cx,
+            cy,
+            p.orbit * scale,
+            p.orbit * scale * 0.62,
+            0,
+            0,
+            TAU,
+          );
+          ctx.stroke();
+        }
+      }
+      function drawBelts(cx, cy, scale) {
+        ctx.fillStyle = "rgba(203,213,225,.55)";
+        for (const belt of system.belts)
+          for (const rock of belt.rocks) {
+            const r = (belt.orbit + rock.r * belt.width) * scale;
+            const a = rock.a + simTime * 0.012;
+            ctx.globalAlpha = 0.2 + rock.s * 0.16;
+            ctx.beginPath();
+            ctx.arc(
+              cx + Math.cos(a) * r,
+              cy + Math.sin(a) * r * 0.62,
+              rock.s,
+              0,
+              TAU,
+            );
+            ctx.fill();
+          }
+        ctx.globalAlpha = 1;
+      }
+      function drawStar(cx, cy) {
+        const glow = ctx.createRadialGradient(cx, cy, 8, cx, cy, 150);
+        glow.addColorStop(0, system.star.color);
+        glow.addColorStop(0.25, system.star.glow + "aa");
+        glow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 150, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = system.star.color;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 34 + system.mass * 9, 0, TAU);
+        ctx.fill();
+      }
+      function drawPlanets(cx, cy, scale) {
+        ctx.font = "700 13px system-ui";
+        ctx.textAlign = "center";
+        for (const p of system.planets) {
+          const a = p.angle + simTime * p.speed;
+          const x = cx + Math.cos(a) * p.orbit * scale;
+          const y = cy + Math.sin(a) * p.orbit * scale * 0.62;
+          if (controls.showMoons.checked && p.moons) drawMoons(p, x, y, a);
+          const colors = palettes[p.type];
+          const grad = ctx.createRadialGradient(
+            x - p.radius * 0.35,
+            y - p.radius * 0.4,
+            1,
+            x,
+            y,
+            p.radius * 1.25,
+          );
+          grad.addColorStop(0, colors[2]);
+          grad.addColorStop(0.55, colors[1]);
+          grad.addColorStop(1, colors[0]);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(x, y, p.radius, 0, TAU);
+          ctx.fill();
+          if (p.type === "gas" || p.type === "giant") {
+            ctx.save();
+            ctx.clip();
+            ctx.strokeStyle = "rgba(255,255,255,.22)";
+            for (let yy = -p.radius; yy <= p.radius; yy += 5) {
+              ctx.beginPath();
+              ctx.moveTo(x - p.radius, y + yy);
+              ctx.lineTo(x + p.radius, y + yy + Math.sin(yy + simTime) * 2);
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+          if (p.inHz) {
+            ctx.strokeStyle = "#86efac";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(x, y, p.radius + 4, 0, TAU);
+            ctx.stroke();
+          }
+          if (controls.showLabels.checked) {
+            ctx.fillStyle = "#e2e8f0";
+            ctx.fillText(p.name, x, y - p.radius - 10);
+          }
+        }
+      }
+      function drawMoons(p, x, y, a) {
+        ctx.fillStyle = "rgba(226,232,240,.85)";
+        const visible = Math.min(p.moons, 5);
+        for (let i = 0; i < visible; i++) {
+          const ma = a * (2 + i * 0.5) + (i * TAU) / visible + simTime * 0.5;
+          const mr = p.radius + 9 + i * 3;
+          ctx.beginPath();
+          ctx.arc(
+            x + Math.cos(ma) * mr,
+            y + Math.sin(ma) * mr * 0.55,
+            Math.max(1.5, p.radius * 0.12),
+            0,
+            TAU,
+          );
+          ctx.fill();
+        }
+      }
+      function download() {
+        const a = document.createElement("a");
+        a.download = `${system.seed || "solar-system"}.png`;
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+        log("Exported PNG", a.download);
+      }
+      document.getElementById("generate").addEventListener("click", generate);
+      document
+        .getElementById("randomize")
+        .addEventListener("click", randomSeed);
+      document.getElementById("download").addEventListener("click", download);
+      document
+        .getElementById("clearLog")
+        .addEventListener("click", () => (logEl.textContent = ""));
+      Object.values(controls).forEach((el) =>
+        el.addEventListener("input", () => {
+          syncLabels();
+          if (
+            ["planetCount", "beltChance", "seed", "starClass"].includes(el.id)
+          )
+            generate();
+        }),
+      );
+      ["showLabels", "showHabitable", "showMoons", "showTrails"].forEach((id) =>
+        document
+          .getElementById(id)
+          .addEventListener("change", () => log("Layer toggled", id)),
+      );
+      syncLabels();
+      generate();
+      requestAnimationFrame(draw);
+    </script>
+  </body>
+</html>
