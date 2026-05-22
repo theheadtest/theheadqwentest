@@ -33,8 +33,8 @@
     <main class="wrap">
       <h1>🧭 FreeGuessr Lite</h1>
       <p>
-        Seeded mini geo-guessing prototype using free stack pieces: Leaflet + OSM and image rounds you can swap to
-        Mapillary/KartaView later.
+        Seeded mini geo-guessing prototype using free stack pieces: Leaflet + OSM with real street-level panoramas
+        from Mapillary.
       </p>
 
       <section class="panel">
@@ -53,7 +53,13 @@
       <section class="grid" style="margin-top:12px;">
         <article class="panel">
           <h3>Challenge view</h3>
-          <img id="sceneImage" class="viewer" alt="Challenge scene" />
+          <iframe
+            id="sceneFrame"
+            class="viewer"
+            title="Challenge panorama"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          ></iframe>
           <p id="sceneMeta"></p>
         </article>
         <article class="panel">
@@ -74,14 +80,14 @@
       const ROUND_COUNT = 5;
       const MAX_POINTS = 5000;
       const LOCATION_POOL = [
-        { name: "Tokyo, Japan", lat: 35.6895, lng: 139.6917, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Shibuya_Crossing%2C_Tokyo%2C_Japan_%282018%29.jpg/1280px-Shibuya_Crossing%2C_Tokyo%2C_Japan_%282018%29.jpg" },
-        { name: "Paris, France", lat: 48.8566, lng: 2.3522, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Paris_Night.jpg/1280px-Paris_Night.jpg" },
-        { name: "New York, USA", lat: 40.7128, lng: -74.006, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/New_york_times_square-terabass.jpg/1280px-New_york_times_square-terabass.jpg" },
-        { name: "Cape Town, South Africa", lat: -33.9249, lng: 18.4241, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Cape_Town_CBD.jpg/1280px-Cape_Town_CBD.jpg" },
-        { name: "Sydney, Australia", lat: -33.8688, lng: 151.2093, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Sydney_Opera_House%2C_-_Dec_2008.jpg/1280px-Sydney_Opera_House%2C_-_Dec_2008.jpg" },
-        { name: "Mexico City, Mexico", lat: 19.4326, lng: -99.1332, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Mexico_City_Montage_2017.png/1280px-Mexico_City_Montage_2017.png" },
-        { name: "Cairo, Egypt", lat: 30.0444, lng: 31.2357, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Kheops-Pyramid.jpg/1280px-Kheops-Pyramid.jpg" },
-        { name: "Rio de Janeiro, Brazil", lat: -22.9068, lng: -43.1729, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Rio_de_Janeiro_City.jpg/1280px-Rio_de_Janeiro_City.jpg" }
+        { name: "Budapest, Hungary", lat: 47.498, lng: 19.0399, mapillaryKey: "269608424400626" },
+        { name: "Melbourne, Australia", lat: -37.8136, lng: 144.9631, mapillaryKey: "311829370820231" },
+        { name: "Oslo, Norway", lat: 59.9139, lng: 10.7522, mapillaryKey: "345355280922663" },
+        { name: "Lisbon, Portugal", lat: 38.7223, lng: -9.1393, mapillaryKey: "3086092101684495" },
+        { name: "Santiago, Chile", lat: -33.4489, lng: -70.6693, mapillaryKey: "320575492299999" },
+        { name: "Warsaw, Poland", lat: 52.2297, lng: 21.0122, mapillaryKey: "1613321502197083" },
+        { name: "San Juan, Puerto Rico", lat: 18.4655, lng: -66.1057, mapillaryKey: "496980610066281" },
+        { name: "Bucharest, Romania", lat: 44.4268, lng: 26.1025, mapillaryKey: "522876772251363" }
       ];
 
       const url = new URL(window.location.href);
@@ -143,7 +149,7 @@
       const statusEl = document.getElementById("status");
       const roundText = document.getElementById("roundText");
       const scoreText = document.getElementById("scoreText");
-      const sceneImage = document.getElementById("sceneImage");
+      const sceneFrame = document.getElementById("sceneFrame");
       const sceneMeta = document.getElementById("sceneMeta");
       const startBtn = document.getElementById("startBtn");
       const submitBtn = document.getElementById("submitBtn");
@@ -159,7 +165,13 @@
       function renderRound() {
         const current = rounds[roundIndex];
         roundText.textContent = `Round ${roundIndex + 1} / ${ROUND_COUNT}`;
-        sceneImage.src = current.image;
+        const mapillaryUrl = new URL("https://www.mapillary.com/app/");
+        mapillaryUrl.searchParams.set("focus", "photo");
+        mapillaryUrl.searchParams.set("pKey", current.mapillaryKey);
+        mapillaryUrl.searchParams.set("x", String(current.lng));
+        mapillaryUrl.searchParams.set("y", String(current.lat));
+        mapillaryUrl.searchParams.set("z", "17");
+        sceneFrame.src = mapillaryUrl.toString();
         sceneMeta.textContent = "Guess where this location is. (Name hidden until submit.)";
         statusEl.textContent = "Place one marker on the map and submit your guess.";
         submitBtn.disabled = true;
