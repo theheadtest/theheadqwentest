@@ -73,9 +73,6 @@
   main {
     flex: 1;
     position: relative;
-    display: grid;
-    grid-template-columns: 1fr 380px;
-    gap: 0;
     overflow: hidden;
   }
 
@@ -184,11 +181,25 @@
 
   /* Guessing map panel */
   #mapPanel {
-    position: relative;
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    width: 220px;
+    height: 220px;
     display: flex;
     flex-direction: column;
     background: var(--panel);
-    border-left: 1px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    z-index: 15;
+    transition: width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  #mapPanel.expanded, #mapPanel:hover {
+    width: 380px;
+    height: 420px;
+    box-shadow: 0 16px 34px rgba(0,0,0,0.5);
   }
   #mapPanel .panel-header {
     padding: 14px 18px;
@@ -249,7 +260,7 @@
     position: absolute;
     bottom: 24px;
     left: 24px;
-    right: 420px;
+    right: 24px;
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(10px);
     border: 1px solid var(--border);
@@ -357,9 +368,20 @@
 
   /* Mobile */
   @media (max-width: 860px) {
-    main { grid-template-columns: 1fr; grid-template-rows: 50vh 1fr; }
-    #mapPanel { border-left: none; border-top: 1px solid var(--border); }
-    .result-overlay { right: 20px; left: 20px; bottom: 52vh; }
+    #mapPanel {
+      right: 12px;
+      bottom: 12px;
+      width: 170px;
+      height: 170px;
+      border-radius: 12px;
+    }
+    #mapPanel.expanded, #mapPanel:hover {
+      width: calc(100% - 24px);
+      height: calc(100% - 24px);
+      right: 12px;
+      bottom: 12px;
+    }
+    .result-overlay { right: 20px; left: 20px; bottom: 20px; }
     .stats { gap: 14px; }
     .stat-value { font-size: 15px; }
     .logo { font-size: 17px; }
@@ -420,6 +442,7 @@
         <div class="coord-display" id="coordDisplay">Click the map to place your guess</div>
         <button class="btn btn-primary" id="guessBtn" disabled>Place pin first</button>
         <button class="btn btn-secondary" id="skipBtn">Skip round</button>
+        <button class="btn btn-secondary" id="mapToggleBtn">Toggle map size</button>
       </div>
     </div>
 
@@ -506,6 +529,13 @@ const LOCATIONS = [
   { lat: 35.0116, lng: 135.7681, name: "Kyoto, Japan" },
   { lat: -37.8136, lng: 144.9631, name: "Melbourne, Australia" }
 ];
+const REGION_BIASES = [
+  { name: "North America", lat: [25, 50], lng: [-130, -60], weight: 3 },
+  { name: "Europe", lat: [35, 60], lng: [-10, 40], weight: 3 },
+  { name: "East Asia", lat: [20, 45], lng: [100, 145], weight: 2 },
+  { name: "South America", lat: [-38, 8], lng: [-80, -35], weight: 1 },
+  { name: "Oceania", lat: [-42, -10], lng: [110, 175], weight: 1 }
+];
 
 const state = {
   round: 0,
@@ -514,7 +544,9 @@ const state = {
   roundResults: [],
   currentLocation: null,
   guessMarker: null,
-  usedIndexes: []
+  usedIndexes: [],
+  roundSeed: null,
+  rng: null
 };
 
 const $ = (id) => document.getElementById(id);
@@ -527,6 +559,7 @@ const skipBtn = $('skipBtn');
 const nextBtn = $('nextBtn');
 const startBtn = $('startBtn');
 const playAgainBtn = $('playAgainBtn');
+const mapToggleBtn = $('mapToggleBtn');
 const startScreen = $('startScreen');
 const endScreen = $('endScreen');
 const resultOverlay = $('resultOverlay');
@@ -537,6 +570,7 @@ const finalScore = $('finalScore');
 const roundList = $('roundList');
 const endMessage = $('endMessage');
 const hudRound = $('hudRound');
+const mapPanel = $('mapPanel');
 
 const guessMap = L.map('guessMap', {
   center: [20, 0],
@@ -587,8 +621,15 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 }
 
 function calcScore(distanceKm) {
-  const score = 5000 * Math.exp(-distanceKm / 2000);
+  const score = 5000 * Math.exp(-Math.pow(distanceKm / 1500, 1.35));
   return Math.round(Math.max(0, score));
+}
+function getResultLabel(distanceKm, skipped) {
+  if (skipped) return 'Skipped';
+  if (distanceKm < 5) return 'Perfect';
+  if (distanceKm < 50) return 'Excellent';
+  if (distanceKm < 300) return 'Great';
+  return 'Way off';
 }
 
 function buildStreetViewUrl(lat, lng) {
@@ -597,15 +638,46 @@ function buildStreetViewUrl(lat, lng) {
 }
 
 function pickLocation() {
+  // Use static curated points as baseline, but bias by world region for variety.
+  const possible = LOCATIONS.filter((loc) => {
+    if (state.usedIndexes.length >= LOCATIONS.length) return true;
+    return !state.usedIndexes.includes(LOCATIONS.indexOf(loc));
+  });
+  const weighted = [];
+  possible.forEach((loc) => {
+    const region = REGION_BIASES.find(r =>
+      loc.lat >= r.lat[0] && loc.lat <= r.lat[1] && loc.lng >= r.lng[0] && loc.lng <= r.lng[1]
+    );
+    const w = region ? region.weight : 1;
+    for (let i = 0; i < w; i++) weighted.push(loc);
+  });
+  const picked = weighted[Math.floor(rand() * weighted.length)];
+  const idx = LOCATIONS.indexOf(picked);
   if (state.usedIndexes.length >= LOCATIONS.length) {
     state.usedIndexes = [];
   }
-  let idx;
-  do {
-    idx = Math.floor(Math.random() * LOCATIONS.length);
-  } while (state.usedIndexes.includes(idx));
   state.usedIndexes.push(idx);
   return LOCATIONS[idx];
+}
+
+function createSeededRandom(seed) {
+  let h = 1779033703 ^ seed.length;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function() {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+}
+function rand() {
+  return state.rng ? state.rng() : Math.random();
+}
+function generateRoundSeed() {
+  return `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
 }
 
 function startRound() {
@@ -622,6 +694,10 @@ function startRound() {
   roundStat.textContent = `${state.round + 1} / ${state.totalRounds}`;
   hudRound.textContent = `Round ${state.round + 1} / ${state.totalRounds}`;
   scoreStat.textContent = state.totalScore.toLocaleString();
+  const shareState = new URLSearchParams(window.location.search);
+  shareState.set('seed', state.roundSeed);
+  shareState.set('round', String(state.round + 1));
+  window.history.replaceState({}, '', `${window.location.pathname}?${shareState.toString()}`);
   coordDisplay.textContent = 'Click the map to place your guess';
   guessBtn.disabled = true;
   guessBtn.textContent = 'Place pin first';
@@ -670,10 +746,11 @@ function submitGuess(skipped = false) {
   scoreStat.textContent = state.totalScore.toLocaleString();
 
   resultScoreVal.textContent = points.toLocaleString();
+  const label = getResultLabel(distanceKm, skipped || !state.guessMarker);
   if (skipped || !state.guessMarker) {
     resultDistance.textContent = 'Skipped';
   } else {
-    resultDistance.textContent = `${Math.round(distanceKm).toLocaleString()} km away`;
+    resultDistance.textContent = `${label} · ${Math.round(distanceKm).toLocaleString()} km away`;
   }
   resultLocation.textContent = actual.name;
   resultOverlay.classList.add('show');
@@ -718,6 +795,8 @@ function showEndScreen() {
 }
 
 function resetGame() {
+  state.roundSeed = generateRoundSeed();
+  state.rng = createSeededRandom(state.roundSeed);
   state.round = 0;
   state.totalScore = 0;
   state.roundResults = [];
@@ -734,7 +813,16 @@ startBtn.addEventListener('click', () => {
   startRound();
 });
 playAgainBtn.addEventListener('click', resetGame);
+mapToggleBtn.addEventListener('click', () => mapPanel.classList.toggle('expanded'));
+mapPanel.addEventListener('mouseenter', () => mapPanel.classList.add('expanded'));
+mapPanel.addEventListener('mouseleave', () => mapPanel.classList.remove('expanded'));
+
+(() => {
+  const params = new URLSearchParams(window.location.search);
+  const seed = params.get('seed') || generateRoundSeed();
+  state.roundSeed = seed;
+  state.rng = createSeededRandom(seed);
+})();
 </script>
 </body>
 </html>
-
