@@ -1,244 +1,740 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FreeGuessr Lite</title>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""
-    />
-    <style>
-      :root { color-scheme: dark; }
-      body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #020617; color: #e2e8f0; }
-      .wrap { width: min(1200px, calc(100% - 24px)); margin: 20px auto 28px; }
-      .panel { background: rgba(15,23,42,.9); border: 1px solid rgba(148,163,184,.24); border-radius: 16px; padding: 14px; }
-      .grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 12px; }
-      #guessMap, #resultMap { height: 480px; border-radius: 12px; }
-      .viewer { width: 100%; height: 480px; border: 0; border-radius: 12px; background: #0f172a; }
-      button { border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 700; cursor: pointer; }
-      button.primary { background: #22d3ee; color: #06202a; }
-      button.secondary { background: #334155; color: #e2e8f0; }
-      button:disabled { opacity: .45; cursor: not-allowed; }
-      .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
-      .pill { background: #0b1224; border: 1px solid rgba(148,163,184,.28); padding: 6px 10px; border-radius: 999px; }
-      .score { font-size: 1.2rem; font-weight: 800; }
-      a { color: #67e8f9; }
-      @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } #guessMap, #resultMap, .viewer { height: 350px; } }
-    </style>
-  </head>
-  <body>
-    <main class="wrap">
-      <h1>🧭 FreeGuessr Lite</h1>
-      <p>
-        Seeded mini geo-guessing prototype using free stack pieces: Leaflet + OSM with real street-level panoramas
-        from Mapillary.
-      </p>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GeoMini — MVP Geography Guesser</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #273449;
+    --accent: #22c55e;
+    --accent-2: #16a34a;
+    --danger: #ef4444;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: #334155;
+  }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
 
-      <section class="panel">
-        <div class="row">
-          <button id="startBtn" class="primary">Start game</button>
-          <button id="submitBtn" class="secondary" disabled>Submit guess</button>
-          <button id="nextBtn" class="secondary" disabled>Next round</button>
-          <button id="shareBtn" class="secondary">Copy share URL</button>
-          <span class="pill" id="seedText"></span>
-          <span class="pill" id="roundText">Round 0 / 5</span>
-          <span class="pill score" id="scoreText">Score: 0</span>
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    background: linear-gradient(90deg, #0f172a, #1e293b);
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 800; font-size: 20px;
+    letter-spacing: -0.3px;
+  }
+  .logo-mark {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #22c55e, #10b981);
+    border-radius: 8px;
+    display: grid; place-items: center;
+    font-size: 18px;
+  }
+  .stats {
+    display: flex; gap: 24px; align-items: center;
+  }
+  .stat {
+    display: flex; flex-direction: column; align-items: flex-end;
+  }
+  .stat-label {
+    font-size: 11px; text-transform: uppercase;
+    color: var(--muted); letter-spacing: 0.8px;
+  }
+  .stat-value {
+    font-size: 18px; font-weight: 700;
+  }
+  .stat-value.accent { color: var(--accent); }
+
+  /* Main area */
+  main {
+    flex: 1;
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* Street view container (with HUD overlay to hide Google branding) */
+  #svContainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+  }
+  #streetview {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    border: none;
+    display: block;
+  }
+
+  /* HUD pills covering the top-left Google location/link overlay */
+  .sv-hud {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    display: flex;
+    gap: 8px;
+    z-index: 5;
+    pointer-events: none;
+    /* Ensure it fully covers the Google branding strip (~280x70px) */
+    min-width: 290px;
+    min-height: 48px;
+  }
+  .sv-hud-pill {
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  .sv-hud-pill.brand .logo-mark-sm {
+    width: 22px; height: 22px;
+    background: linear-gradient(135deg, #22c55e, #10b981);
+    border-radius: 6px;
+    display: grid; place-items: center;
+    font-size: 13px;
+  }
+  .sv-hud-pill.round .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Small compass hint bottom-right of street view */
+  .sv-hint {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    z-index: 5;
+    pointer-events: none;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .sv-hint kbd {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--text);
+    font-family: inherit;
+  }
+
+  .sv-fallback {
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px;
+    color: var(--muted); padding: 30px; text-align: center;
+  }
+  .sv-fallback .spin {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Guessing map panel */
+  #mapPanel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+  }
+  #mapPanel .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--muted);
+  }
+  #mapPanel .panel-header strong { color: var(--text); }
+  #guessMap {
+    flex: 1;
+    background: #0a1120;
+  }
+  .guess-actions {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .coord-display {
+    font-size: 12px; color: var(--muted);
+    font-family: "SF Mono", Menlo, monospace;
+    min-height: 16px;
+  }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.15s ease;
+  }
+  button:active { transform: translateY(1px); }
+  .btn {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    color: white;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.45);
+  }
+  .btn-primary:disabled {
+    background: var(--panel-2);
+    color: var(--muted);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  .btn-secondary {
+    background: var(--panel-2);
+    color: var(--text);
+  }
+  .btn-secondary:hover { background: #334155; }
+
+  /* Result overlay */
+  .result-overlay {
+    position: absolute;
+    bottom: 24px;
+    left: 24px;
+    right: 420px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    display: none;
+    align-items: center;
+    gap: 20px;
+    z-index: 20;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .result-overlay.show { display: flex; }
+  .result-score {
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    min-width: 100px;
+  }
+  .result-score small {
+    display: block; font-size: 12px; color: var(--muted);
+    font-weight: 500; letter-spacing: 1px; margin-top: 4px;
+  }
+  .result-info {
+    flex: 1;
+  }
+  .result-info h3 {
+    font-size: 16px; margin-bottom: 4px;
+  }
+  .result-info p {
+    font-size: 13px; color: var(--muted);
+  }
+
+  /* Splash / Summary screens */
+  .screen-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .screen-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 44px;
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+  }
+  .screen-card h1 {
+    font-size: 32px;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .screen-card h1 .emoji { font-size: 36px; }
+  .screen-card p {
+    color: var(--muted);
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .screen-card .big-score {
+    font-size: 64px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .screen-card .big-score small {
+    display: block; font-size: 14px; color: var(--muted);
+    font-weight: 500; letter-spacing: 1px; margin-top: 6px;
+  }
+  .round-list {
+    margin: 20px 0 28px;
+    display: flex; flex-direction: column; gap: 8px;
+    text-align: left;
+  }
+  .round-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--panel-2);
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .round-item .num {
+    color: var(--muted); font-weight: 600;
+    min-width: 60px;
+  }
+  .round-item .pts {
+    color: var(--accent); font-weight: 700;
+  }
+  .btn-group {
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+  }
+  .hidden { display: none !important; }
+
+  /* Mobile */
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 50vh 1fr; }
+    #mapPanel { border-left: none; border-top: 1px solid var(--border); }
+    .result-overlay { right: 20px; left: 20px; bottom: 52vh; }
+    .stats { gap: 14px; }
+    .stat-value { font-size: 15px; }
+    .logo { font-size: 17px; }
+    .sv-hud { min-width: 240px; }
+    .sv-hud-pill { font-size: 12px; padding: 7px 11px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="logo-mark">🌍</div>
+      <div>GeoMini <span style="color:var(--muted);font-weight:500;font-size:13px;">MVP</span></div>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">Round</span>
+        <span class="stat-value" id="roundStat">1 / 5</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Score</span>
+        <span class="stat-value accent" id="scoreStat">0</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="svContainer">
+      <iframe id="streetview" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+
+      <!-- HUD overlay that naturally covers the Google "location + View on Maps" branding -->
+      <div class="sv-hud">
+        <div class="sv-hud-pill brand">
+          <div class="logo-mark-sm">🌍</div>
+          <span>GeoMini</span>
         </div>
-        <div id="status">Press <strong>Start game</strong> to begin.</div>
-      </section>
+        <div class="sv-hud-pill round">
+          <span class="dot"></span>
+          <span id="hudRound">Round 1 / 5</span>
+        </div>
+      </div>
 
-      <section class="grid" style="margin-top:12px;">
-        <article class="panel">
-          <h3>Challenge view</h3>
-          <iframe
-            id="sceneFrame"
-            class="viewer"
-            title="Challenge panorama"
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-          ></iframe>
-          <p id="sceneMeta"></p>
-        </article>
-        <article class="panel">
-          <h3>Your guess map</h3>
-          <div id="guessMap"></div>
-        </article>
-      </section>
+      <!-- Helpful controls hint -->
+      <div class="sv-hint">
+        <span>🧭 Drag to look around</span>
+        <span>·</span>
+        <span><kbd>+</kbd><kbd>−</kbd> zoom</span>
+      </div>
+    </div>
 
-      <section class="panel" style="margin-top:12px;">
-        <h3>Final results map</h3>
-        <div id="resultMap"></div>
-      </section>
-    </main>
+    <div id="mapPanel">
+      <div class="panel-header">
+        <strong>Drop your pin</strong> on the map where you think this is.
+      </div>
+      <div id="guessMap"></div>
+      <div class="guess-actions">
+        <div class="coord-display" id="coordDisplay">Click the map to place your guess</div>
+        <button class="btn btn-primary" id="guessBtn" disabled>Place pin first</button>
+        <button class="btn btn-secondary" id="skipBtn">Skip round</button>
+      </div>
+    </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script>
-      "use strict";
-      const ROUND_COUNT = 5;
-      const MAX_POINTS = 5000;
-      const LOCATION_POOL = [
-        { name: "Budapest, Hungary", lat: 47.498, lng: 19.0399, mapillaryKey: "269608424400626" },
-        { name: "Melbourne, Australia", lat: -37.8136, lng: 144.9631, mapillaryKey: "311829370820231" },
-        { name: "Oslo, Norway", lat: 59.9139, lng: 10.7522, mapillaryKey: "345355280922663" },
-        { name: "Lisbon, Portugal", lat: 38.7223, lng: -9.1393, mapillaryKey: "3086092101684495" },
-        { name: "Santiago, Chile", lat: -33.4489, lng: -70.6693, mapillaryKey: "320575492299999" },
-        { name: "Warsaw, Poland", lat: 52.2297, lng: 21.0122, mapillaryKey: "1613321502197083" },
-        { name: "San Juan, Puerto Rico", lat: 18.4655, lng: -66.1057, mapillaryKey: "496980610066281" },
-        { name: "Bucharest, Romania", lat: 44.4268, lng: 26.1025, mapillaryKey: "522876772251363" }
-      ];
+    <div class="result-overlay" id="resultOverlay">
+      <div class="result-score">
+        <span id="resultScoreVal">0</span>
+        <small>POINTS</small>
+      </div>
+      <div class="result-info">
+        <h3 id="resultDistance">— km away</h3>
+        <p id="resultLocation">Actual location</p>
+      </div>
+      <button class="btn btn-primary" id="nextBtn">Next round →</button>
+    </div>
+  </main>
 
-      const url = new URL(window.location.href);
-      const seed = Number.parseInt(url.searchParams.get("seed"), 10) || Math.floor(Math.random() * 1e9);
-      const seedEl = document.getElementById("seedText");
-      seedEl.textContent = `Seed: ${seed}`;
+  <!-- Start Screen -->
+  <div class="screen-overlay" id="startScreen">
+    <div class="screen-card">
+      <h1><span class="emoji">🗺️</span> GeoMini</h1>
+      <p>A minimal geography guessing game.<br>
+      You'll see a street-level view of a random place. Look around, explore the map on the right, drop a pin and guess where you are. Closer = more points.</p>
+      <div class="round-list" style="text-align:center;background:var(--panel-2);padding:14px;border-radius:10px;">
+        <div style="font-size:13px;color:var(--muted);">5 rounds · max 5,000 points each · max total 25,000</div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="startBtn">Start Game</button>
+      </div>
+    </div>
+  </div>
 
-      function mulberry32(a) {
-        return function () {
-          let t = (a += 0x6d2b79f5);
-          t = Math.imul(t ^ (t >>> 15), t | 1);
-          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-        };
-      }
+  <!-- End Screen -->
+  <div class="screen-overlay hidden" id="endScreen">
+    <div class="screen-card">
+      <h1>Game Over <span class="emoji">🏁</span></h1>
+      <p id="endMessage">Nice run! Here's how you did:</p>
+      <div class="big-score">
+        <span id="finalScore">0</span>
+        <small id="finalMax">/ 25,000</small>
+      </div>
+      <div class="round-list" id="roundList"></div>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="playAgainBtn">Play Again</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-      function pickRounds() {
-        const rng = mulberry32(seed);
-        const bag = [...LOCATION_POOL];
-        const rounds = [];
-        for (let i = 0; i < ROUND_COUNT; i += 1) {
-          const idx = Math.floor(rng() * bag.length);
-          rounds.push(bag.splice(idx, 1)[0]);
-        }
-        return rounds;
-      }
+<script>
+/* =================================================================
+   GeoMini — MVP
+   Stack: Leaflet (OpenStreetMap) + Google Street View embed
+   ================================================================= */
 
-      function haversineKm(a, b) {
-        const toRad = (x) => (x * Math.PI) / 180;
-        const R = 6371;
-        const dLat = toRad(b.lat - a.lat);
-        const dLng = toRad(b.lng - a.lng);
-        const lat1 = toRad(a.lat);
-        const lat2 = toRad(b.lat);
-        const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-        return 2 * R * Math.asin(Math.sqrt(h));
-      }
+const LOCATIONS = [
+  { lat: 48.8584, lng: 2.2945, name: "Paris, France" },
+  { lat: 35.6762, lng: 139.6503, name: "Tokyo, Japan" },
+  { lat: 40.7580, lng: -73.9855, name: "New York, USA" },
+  { lat: -33.8568, lng: 151.2153, name: "Sydney, Australia" },
+  { lat: 51.5014, lng: -0.1419, name: "London, UK" },
+  { lat: -22.9519, lng: -43.2105, name: "Rio de Janeiro, Brazil" },
+  { lat: -33.9249, lng: 18.4241, name: "Cape Town, South Africa" },
+  { lat: 25.1972, lng: 55.2744, name: "Dubai, UAE" },
+  { lat: 52.3702, lng: 4.8952, name: "Amsterdam, Netherlands" },
+  { lat: 41.9028, lng: 12.4964, name: "Rome, Italy" },
+  { lat: 41.0082, lng: 28.9784, name: "Istanbul, Turkey" },
+  { lat: 13.7563, lng: 100.5018, name: "Bangkok, Thailand" },
+  { lat: -34.6037, lng: -58.3816, name: "Buenos Aires, Argentina" },
+  { lat: 55.7558, lng: 37.6173, name: "Moscow, Russia" },
+  { lat: 37.7749, lng: -122.4194, name: "San Francisco, USA" },
+  { lat: 1.3521, lng: 103.8198, name: "Singapore" },
+  { lat: 59.3293, lng: 18.0686, name: "Stockholm, Sweden" },
+  { lat: 30.0444, lng: 31.2357, name: "Cairo, Egypt" },
+  { lat: 19.4326, lng: -99.1332, name: "Mexico City, Mexico" },
+  { lat: 37.5665, lng: 126.9780, name: "Seoul, South Korea" },
+  { lat: 43.6532, lng: -79.3832, name: "Toronto, Canada" },
+  { lat: 52.5200, lng: 13.4050, name: "Berlin, Germany" },
+  { lat: 41.3851, lng: 2.1734, name: "Barcelona, Spain" },
+  { lat: 19.0760, lng: 72.8777, name: "Mumbai, India" },
+  { lat: 60.1699, lng: 24.9384, name: "Helsinki, Finland" },
+  { lat: -41.2865, lng: 174.7762, name: "Wellington, New Zealand" },
+  { lat: 47.4979, lng: 19.0402, name: "Budapest, Hungary" },
+  { lat: 50.0755, lng: 14.4378, name: "Prague, Czech Republic" },
+  { lat: 35.0116, lng: 135.7681, name: "Kyoto, Japan" },
+  { lat: -37.8136, lng: 144.9631, name: "Melbourne, Australia" }
+];
 
-      function pointsForDistance(km) {
-        return Math.max(0, Math.round(MAX_POINTS * Math.exp(-km / 2200)));
-      }
+const state = {
+  round: 0,
+  totalRounds: 5,
+  totalScore: 0,
+  roundResults: [],
+  currentLocation: null,
+  guessMarker: null,
+  usedIndexes: []
+};
 
-      const rounds = pickRounds();
-      let roundIndex = -1;
-      let totalScore = 0;
-      let guessMarker = null;
-      let guessLatLng = null;
-      const logs = [];
+const $ = (id) => document.getElementById(id);
+const streetviewFrame = $('streetview');
+const roundStat = $('roundStat');
+const scoreStat = $('scoreStat');
+const coordDisplay = $('coordDisplay');
+const guessBtn = $('guessBtn');
+const skipBtn = $('skipBtn');
+const nextBtn = $('nextBtn');
+const startBtn = $('startBtn');
+const playAgainBtn = $('playAgainBtn');
+const startScreen = $('startScreen');
+const endScreen = $('endScreen');
+const resultOverlay = $('resultOverlay');
+const resultScoreVal = $('resultScoreVal');
+const resultDistance = $('resultDistance');
+const resultLocation = $('resultLocation');
+const finalScore = $('finalScore');
+const roundList = $('roundList');
+const endMessage = $('endMessage');
+const hudRound = $('hudRound');
 
-      const guessMap = L.map("guessMap", { worldCopyJump: true }).setView([20, 0], 2);
-      const resultMap = L.map("resultMap", { worldCopyJump: true }).setView([20, 0], 2);
+const guessMap = L.map('guessMap', {
+  center: [20, 0],
+  zoom: 2,
+  minZoom: 2,
+  worldCopyJump: true
+});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 18
+}).addTo(guessMap);
 
-      const tileOptions = {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      };
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", tileOptions).addTo(guessMap);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", tileOptions).addTo(resultMap);
+const pinIcon = L.divIcon({
+  html: `<div style="width:28px;height:28px;background:#ef4444;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`,
+  className: '',
+  iconSize: [28, 28],
+  iconAnchor: [14, 28]
+});
+const actualIcon = L.divIcon({
+  html: `<div style="width:28px;height:28px;background:#22c55e;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`,
+  className: '',
+  iconSize: [28, 28],
+  iconAnchor: [14, 28]
+});
 
-      const statusEl = document.getElementById("status");
-      const roundText = document.getElementById("roundText");
-      const scoreText = document.getElementById("scoreText");
-      const sceneFrame = document.getElementById("sceneFrame");
-      const sceneMeta = document.getElementById("sceneMeta");
-      const startBtn = document.getElementById("startBtn");
-      const submitBtn = document.getElementById("submitBtn");
-      const nextBtn = document.getElementById("nextBtn");
+let actualMarker = null;
+let connectingLine = null;
 
-      guessMap.on("click", (event) => {
-        guessLatLng = { lat: event.latlng.lat, lng: event.latlng.lng };
-        if (guessMarker) guessMap.removeLayer(guessMarker);
-        guessMarker = L.marker(event.latlng).addTo(guessMap);
-        submitBtn.disabled = false;
-      });
+guessMap.on('click', (e) => {
+  if (resultOverlay.classList.contains('show')) return;
+  if (state.guessMarker) guessMap.removeLayer(state.guessMarker);
+  state.guessMarker = L.marker(e.latlng, { icon: pinIcon }).addTo(guessMap);
+  coordDisplay.textContent = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+  guessBtn.disabled = false;
+  guessBtn.textContent = 'Lock in guess';
+});
 
-      function renderRound() {
-        const current = rounds[roundIndex];
-        roundText.textContent = `Round ${roundIndex + 1} / ${ROUND_COUNT}`;
-        const mapillaryUrl = new URL("https://www.mapillary.com/app/");
-        mapillaryUrl.searchParams.set("focus", "photo");
-        mapillaryUrl.searchParams.set("pKey", current.mapillaryKey);
-        mapillaryUrl.searchParams.set("x", String(current.lng));
-        mapillaryUrl.searchParams.set("y", String(current.lat));
-        mapillaryUrl.searchParams.set("z", "17");
-        sceneFrame.src = mapillaryUrl.toString();
-        sceneMeta.textContent = "Guess where this location is. (Name hidden until submit.)";
-        statusEl.textContent = "Place one marker on the map and submit your guess.";
-        submitBtn.disabled = true;
-        nextBtn.disabled = true;
-        guessLatLng = null;
-        if (guessMarker) { guessMap.removeLayer(guessMarker); guessMarker = null; }
-      }
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toRad = (deg) => deg * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
-      function finishGame() {
-        roundText.textContent = `Round ${ROUND_COUNT} / ${ROUND_COUNT}`;
-        statusEl.innerHTML = `<strong>Game complete!</strong> Final score: ${totalScore}.`;
-        sceneMeta.textContent = "All rounds are plotted below with guess-to-answer lines.";
-      }
+function calcScore(distanceKm) {
+  const score = 5000 * Math.exp(-distanceKm / 2000);
+  return Math.round(Math.max(0, score));
+}
 
-      startBtn.addEventListener("click", () => {
-        roundIndex = 0;
-        totalScore = 0;
-        logs.length = 0;
-        resultMap.eachLayer((layer) => {
-          if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.CircleMarker) resultMap.removeLayer(layer);
-        });
-        scoreText.textContent = "Score: 0";
-        renderRound();
-      });
+function buildStreetViewUrl(lat, lng) {
+  const heading = Math.floor(Math.random() * 360);
+  return `https://maps.google.com/maps?q=&layer=c&cbll=${lat},${lng}&cbp=11,${heading},0,0,0&output=svembed`;
+}
 
-      submitBtn.addEventListener("click", () => {
-        if (!guessLatLng || roundIndex < 0) return;
-        const answer = rounds[roundIndex];
-        const distance = haversineKm(guessLatLng, answer);
-        const pts = pointsForDistance(distance);
-        totalScore += pts;
-        scoreText.textContent = `Score: ${totalScore}`;
+function pickLocation() {
+  if (state.usedIndexes.length >= LOCATIONS.length) {
+    state.usedIndexes = [];
+  }
+  let idx;
+  do {
+    idx = Math.floor(Math.random() * LOCATIONS.length);
+  } while (state.usedIndexes.includes(idx));
+  state.usedIndexes.push(idx);
+  return LOCATIONS[idx];
+}
 
-        statusEl.innerHTML = `Round ${roundIndex + 1}: <strong>${pts}</strong> points, distance <strong>${distance.toFixed(1)} km</strong>.`;
-        sceneMeta.textContent = `Answer: ${answer.name}`;
+function startRound() {
+  if (state.guessMarker) { guessMap.removeLayer(state.guessMarker); state.guessMarker = null; }
+  if (actualMarker) { guessMap.removeLayer(actualMarker); actualMarker = null; }
+  if (connectingLine) { guessMap.removeLayer(connectingLine); connectingLine = null; }
+  resultOverlay.classList.remove('show');
 
-        const guess = [guessLatLng.lat, guessLatLng.lng];
-        const actual = [answer.lat, answer.lng];
-        L.circleMarker(guess, { radius: 6, color: "#f59e0b" }).addTo(resultMap).bindTooltip(`Guess R${roundIndex + 1}`);
-        L.circleMarker(actual, { radius: 6, color: "#10b981" }).addTo(resultMap).bindTooltip(`Actual R${roundIndex + 1}: ${answer.name}`);
-        L.polyline([guess, actual], { color: "#38bdf8", dashArray: "6 6" }).addTo(resultMap);
+  guessMap.setView([20, 0], 2);
 
-        logs.push({ round: roundIndex + 1, answer: answer.name, distanceKm: Number(distance.toFixed(1)), points: pts });
-        submitBtn.disabled = true;
-        nextBtn.disabled = false;
-      });
+  state.currentLocation = pickLocation();
+  streetviewFrame.src = buildStreetViewUrl(state.currentLocation.lat, state.currentLocation.lng);
 
-      nextBtn.addEventListener("click", () => {
-        roundIndex += 1;
-        if (roundIndex >= ROUND_COUNT) {
-          nextBtn.disabled = true;
-          finishGame();
-          return;
-        }
-        renderRound();
-      });
+  roundStat.textContent = `${state.round + 1} / ${state.totalRounds}`;
+  hudRound.textContent = `Round ${state.round + 1} / ${state.totalRounds}`;
+  scoreStat.textContent = state.totalScore.toLocaleString();
+  coordDisplay.textContent = 'Click the map to place your guess';
+  guessBtn.disabled = true;
+  guessBtn.textContent = 'Place pin first';
+  skipBtn.disabled = false;
 
-      document.getElementById("shareBtn").addEventListener("click", async () => {
-        const out = new URL(window.location.href);
-        out.searchParams.set("seed", String(seed));
-        try {
-          await navigator.clipboard.writeText(out.toString());
-          statusEl.textContent = `Share URL copied. Same seed = same rounds.`;
-        } catch {
-          statusEl.innerHTML = `Copy failed. Use this URL manually: <a href="${out}">${out}</a>`;
-        }
-      });
-    </script>
-  </body>
+  setTimeout(() => guessMap.invalidateSize(), 100);
+}
+
+function submitGuess(skipped = false) {
+  const actual = state.currentLocation;
+  let distanceKm, points;
+
+  if (skipped || !state.guessMarker) {
+    distanceKm = 20000;
+    points = 0;
+  } else {
+    const guess = state.guessMarker.getLatLng();
+    distanceKm = haversineKm(guess.lat, guess.lng, actual.lat, actual.lng);
+    points = calcScore(distanceKm);
+  }
+
+  actualMarker = L.marker([actual.lat, actual.lng], { icon: actualIcon }).addTo(guessMap);
+
+  if (state.guessMarker && !skipped) {
+    connectingLine = L.polyline(
+      [state.guessMarker.getLatLng(), [actual.lat, actual.lng]],
+      { color: '#22c55e', weight: 3, dashArray: '8,8', opacity: 0.8 }
+    ).addTo(guessMap);
+
+    const bounds = L.latLngBounds([
+      state.guessMarker.getLatLng(),
+      [actual.lat, actual.lng]
+    ]);
+    guessMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
+  } else {
+    guessMap.setView([actual.lat, actual.lng], 5);
+  }
+
+  state.totalScore += points;
+  state.roundResults.push({
+    round: state.round + 1,
+    location: actual.name,
+    distance: distanceKm,
+    points
+  });
+  scoreStat.textContent = state.totalScore.toLocaleString();
+
+  resultScoreVal.textContent = points.toLocaleString();
+  if (skipped || !state.guessMarker) {
+    resultDistance.textContent = 'Skipped';
+  } else {
+    resultDistance.textContent = `${Math.round(distanceKm).toLocaleString()} km away`;
+  }
+  resultLocation.textContent = actual.name;
+  resultOverlay.classList.add('show');
+
+  nextBtn.textContent = (state.round + 1 >= state.totalRounds) ? 'See results →' : 'Next round →';
+
+  guessBtn.disabled = true;
+  skipBtn.disabled = true;
+}
+
+function handleNext() {
+  state.round++;
+  skipBtn.disabled = false;
+  if (state.round >= state.totalRounds) {
+    showEndScreen();
+  } else {
+    startRound();
+  }
+}
+
+function showEndScreen() {
+  resultOverlay.classList.remove('show');
+  finalScore.textContent = state.totalScore.toLocaleString();
+
+  const pct = state.totalScore / (state.totalRounds * 5000);
+  if (pct >= 0.8) endMessage.textContent = "🌟 Incredible! You're a geography master!";
+  else if (pct >= 0.6) endMessage.textContent = "👏 Great job, really solid performance!";
+  else if (pct >= 0.4) endMessage.textContent = "🙂 Not bad! Room to improve.";
+  else if (pct >= 0.2) endMessage.textContent = "🤔 Keep exploring the world!";
+  else endMessage.textContent = "📚 Time to study some atlases!";
+
+  roundList.innerHTML = state.roundResults.map(r => `
+    <div class="round-item">
+      <span class="num">Round ${r.round}</span>
+      <span style="flex:1;text-align:center;color:var(--text);">${r.location}</span>
+      <span style="color:var(--muted);font-size:13px;min-width:85px;text-align:right;">${Math.round(r.distance).toLocaleString()} km</span>
+      <span class="pts" style="min-width:60px;text-align:right;">${r.points}</span>
+    </div>
+  `).join('');
+
+  endScreen.classList.remove('hidden');
+}
+
+function resetGame() {
+  state.round = 0;
+  state.totalScore = 0;
+  state.roundResults = [];
+  state.usedIndexes = [];
+  endScreen.classList.add('hidden');
+  startRound();
+}
+
+guessBtn.addEventListener('click', () => submitGuess(false));
+skipBtn.addEventListener('click', () => submitGuess(true));
+nextBtn.addEventListener('click', handleNext);
+startBtn.addEventListener('click', () => {
+  startScreen.classList.add('hidden');
+  startRound();
+});
+playAgainBtn.addEventListener('click', resetGame);
+</script>
+</body>
 </html>
+
