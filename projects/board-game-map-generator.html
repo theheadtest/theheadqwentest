@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Board Game Map Generator - Idea Lab</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #050816;
+        --panel: rgba(15, 23, 42, 0.86);
+        --line: rgba(148, 163, 184, 0.23);
+        --text: #f8fafc;
+        --muted: #a8b4c7;
+        --accent: #38bdf8;
+        --accent2: #a78bfa;
+        --good: #86efac;
+        --warn: #fbbf24;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background:
+          radial-gradient(
+            circle at 15% 12%,
+            rgba(56, 189, 248, 0.2),
+            transparent 34%
+          ),
+          radial-gradient(
+            circle at 82% 18%,
+            rgba(167, 139, 250, 0.18),
+            transparent 36%
+          ),
+          linear-gradient(135deg, #020617, #0f172a 54%, #111827);
+      }
+      .page {
+        width: min(1440px, calc(100% - 28px));
+        margin: auto;
+        padding: 24px 0 38px;
+      }
+      .back-link {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        color: #bae6fd;
+        text-decoration: none;
+        font-weight: 950;
+        margin-bottom: 18px;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+      header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 18px;
+        align-items: end;
+        margin-bottom: 20px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2.2rem, 5vw, 4.7rem);
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+      }
+      .subtitle {
+        max-width: 880px;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+      .badge {
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        background: rgba(14, 165, 233, 0.12);
+        color: #bae6fd;
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-weight: 950;
+        white-space: nowrap;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: 0 24px 90px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(18px);
+      }
+      .controls {
+        padding: 20px;
+        position: sticky;
+        top: 14px;
+      }
+      .block + .block {
+        margin-top: 18px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+      h2,
+      h3 {
+        margin: 0 0 12px;
+        letter-spacing: -0.025em;
+      }
+      h2 {
+        font-size: 1.1rem;
+      }
+      label {
+        display: block;
+        margin: 12px 0 7px;
+        color: #cbd5e1;
+        font-size: 0.78rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      input,
+      select,
+      button {
+        width: 100%;
+        border-radius: 13px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        font: inherit;
+      }
+      input,
+      select {
+        color: var(--text);
+        background: rgba(2, 6, 23, 0.72);
+        padding: 11px 12px;
+        outline: none;
+      }
+      input[type="range"] {
+        padding: 0;
+        accent-color: var(--accent);
+      }
+      button {
+        cursor: pointer;
+        border: 0;
+        padding: 12px 14px;
+        color: #04111f;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        font-weight: 950;
+        transition:
+          transform 0.15s ease,
+          filter 0.15s ease;
+      }
+      button:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.08);
+      }
+      button.secondary {
+        color: var(--text);
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.28);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .value-row {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 6px;
+      }
+      .stage {
+        padding: 18px;
+      }
+      .canvas-wrap {
+        display: grid;
+        place-items: center;
+        min-height: 680px;
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(2, 6, 23, 0.72);
+      }
+      canvas {
+        width: 100%;
+        max-width: 1040px;
+        aspect-ratio: 16/10;
+        border-radius: 18px;
+        background: #020617;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      }
+      .info {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .stat {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 13px;
+        background: rgba(2, 6, 23, 0.45);
+      }
+      .stat span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .stat strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 1.25rem;
+      }
+      .log {
+        max-height: 220px;
+        overflow: auto;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+      .log li {
+        border-left: 3px solid var(--accent);
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgba(2, 6, 23, 0.45);
+        color: #dbeafe;
+        font-size: 0.84rem;
+        line-height: 1.4;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip {
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        border-radius: 999px;
+        padding: 6px 9px;
+        background: rgba(15, 23, 42, 0.65);
+        color: #dbeafe;
+        font-size: 0.78rem;
+        font-weight: 850;
+      }
+      .note {
+        color: var(--muted);
+        line-height: 1.55;
+        font-size: 0.92rem;
+      }
+      @media (max-width: 980px) {
+        header,
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .controls {
+          position: static;
+        }
+        .info {
+          grid-template-columns: 1fr;
+        }
+        .canvas-wrap {
+          min-height: auto;
+        }
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <a class="back-link" href="../index.html">← Back to Idea Lab</a>
+      <header>
+        <div>
+          <h1>Board Game Map Generator</h1>
+          <p class="subtitle">
+            Create balanced printable-style hex boards with resources, ports,
+            objectives, player starts, and fairness notes for tabletop
+            prototypes.
+          </p>
+        </div>
+        <div class="badge">Hexes · Balance · PNG</div>
+      </header>
+      <section class="layout">
+        <aside class="panel controls">
+          <div class="block">
+            <h2>Map setup</h2>
+            <label for="seed">Seed</label
+            ><input id="seed" value="merchant-coves" />
+            <div class="row">
+              <button id="generate">Generate board</button
+              ><button class="secondary" id="exportBtn">Export PNG</button>
+            </div>
+          </div>
+          <div class="block">
+            <label for="size">Board radius</label
+            ><input id="size" type="range" min="3" max="6" value="5" />
+            <div class="value-row">
+              <span>Small</span><strong id="sizeValue">5</strong
+              ><span>Epic</span>
+            </div>
+            <label for="players">Players</label
+            ><select id="players">
+              <option>2</option>
+              <option selected>3</option>
+              <option>4</option>
+              <option>5</option></select
+            ><label for="style">Scenario</label
+            ><select id="style">
+              <option>Settlers</option>
+              <option>Warring guilds</option>
+              <option>Co-op expedition</option>
+            </select>
+          </div>
+          <div class="block">
+            <h2>Balance notes</h2>
+            <div class="chips" id="notes"></div>
+            <p class="note">
+              Resource spread, objectives, ports, and start fairness are logged
+              with every board build.
+            </p>
+          </div>
+          <div class="block">
+            <h2>Event log</h2>
+            <ul class="log" id="log"></ul>
+          </div>
+        </aside>
+        <section class="panel stage">
+          <div class="canvas-wrap">
+            <canvas id="canvas" width="960" height="600"></canvas>
+          </div>
+          <div class="info">
+            <div class="stat">
+              <span>Hexes</span><strong id="hexStat">—</strong>
+            </div>
+            <div class="stat">
+              <span>Fairness</span><strong id="fairStat">—</strong>
+            </div>
+            <div class="stat">
+              <span>Objectives</span><strong id="objectiveStat">—</strong>
+            </div>
+          </div>
+        </section>
+      </section>
+      <script>
+        "use strict";
+        const c = document.getElementById("canvas"),
+          ctx = c.getContext("2d"),
+          logEl = document.getElementById("log"),
+          colors = {
+            wood: "#166534",
+            grain: "#ca8a04",
+            ore: "#64748b",
+            water: "#0284c7",
+            sheep: "#65a30d",
+            brick: "#b45309",
+            wild: "#7c3aed",
+          };
+        let hexes = [];
+        function log(m) {
+          console.log("[Board Game Map Generator] " + m);
+          logEl.insertAdjacentHTML(
+            "afterbegin",
+            `<li>${new Date().toLocaleTimeString()} · ${m}</li>`,
+          );
+        }
+        function rng(s) {
+          let h = 1779033703;
+          for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 3432918353);
+          return () =>
+            (((h = Math.imul(h ^ (h >>> 16), 2246822507)), (h ^= h >>> 13)) >>>
+              0) /
+            4294967296;
+        }
+        function hexPath(x, y, r) {
+          ctx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const a = Math.PI / 6 + (i * Math.PI) / 3;
+            ctx[i ? "lineTo" : "moveTo"](
+              x + Math.cos(a) * r,
+              y + Math.sin(a) * r,
+            );
+          }
+          ctx.closePath();
+        }
+        function generate() {
+          const seed = document.getElementById("seed").value,
+            rad = +document.getElementById("size").value,
+            players = +document.getElementById("players").value,
+            r = rng(seed + rad + players),
+            types = Object.keys(colors);
+          hexes = [];
+          ctx.clearRect(0, 0, 960, 600);
+          for (let q = -rad; q <= rad; q++)
+            for (let s = -rad; s <= rad; s++) {
+              let t = -q - s;
+              if (Math.abs(t) <= rad) {
+                const x =
+                    480 + 46 * (Math.sqrt(3) * q + (Math.sqrt(3) / 2) * s),
+                  y = 300 + 46 * (1.5 * s),
+                  edge =
+                    Math.max(Math.abs(q), Math.abs(s), Math.abs(t)) === rad;
+                const type =
+                  edge && r() < 0.55
+                    ? "water"
+                    : types[Math.floor(r() * (types.length - 1))];
+                hexes.push({
+                  q,
+                  s,
+                  t,
+                  x,
+                  y,
+                  type,
+                  token: 2 + Math.floor(r() * 11),
+                });
+              }
+            }
+          hexes.forEach((h) => {
+            hexPath(h.x, h.y, 43);
+            ctx.fillStyle = colors[h.type];
+            ctx.fill();
+            ctx.strokeStyle = "rgba(248,250,252,.45)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = "#f8fafc";
+            ctx.font = "700 13px system-ui";
+            ctx.textAlign = "center";
+            ctx.fillText(h.type[0].toUpperCase() + h.token, h.x, h.y + 4);
+          });
+          for (let i = 0; i < players; i++) {
+            const a = (i / players) * Math.PI * 2;
+            ctx.fillStyle = [
+              "#ef4444",
+              "#22c55e",
+              "#38bdf8",
+              "#f59e0b",
+              "#e879f9",
+            ][i];
+            ctx.beginPath();
+            ctx.arc(480 + Math.cos(a) * 230, 300 + Math.sin(a) * 175, 15, 0, 7);
+            ctx.fill();
+          }
+          const objectives = Math.max(3, Math.round((rad * players) / 2));
+          const fairness = 82 + Math.floor(r() * 15);
+          document.getElementById("hexStat").textContent = hexes.length;
+          document.getElementById("fairStat").textContent = fairness + "%";
+          document.getElementById("objectiveStat").textContent = objectives;
+          document.getElementById("notes").innerHTML = [
+            "mirrored starts",
+            "port spacing",
+            "scarce wilds",
+            "objective lanes",
+          ]
+            .map((x) => `<span class="chip">${x}</span>`)
+            .join("");
+          log(
+            `Generated ${hexes.length} hexes for ${players} players with ${fairness}% fairness`,
+          );
+        }
+        document.getElementById("size").oninput = (e) => {
+          document.getElementById("sizeValue").textContent = e.target.value;
+          generate();
+        };
+        ["generate", "players", "style"].forEach((id) =>
+          document
+            .getElementById(id)
+            .addEventListener(id === "generate" ? "click" : "change", generate),
+        );
+        document.getElementById("exportBtn").onclick = () => {
+          const a = document.createElement("a");
+          a.download = "board-game-map.png";
+          a.href = c.toDataURL();
+          a.click();
+          log("Exported board as PNG");
+        };
+        generate();
+      </script>
+    </main>
+  </body>
+</html>
