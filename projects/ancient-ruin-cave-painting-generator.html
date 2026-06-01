@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ancient Ruin / Cave Painting Generator - Idea Lab</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #050816;
+        --panel: rgba(15, 23, 42, 0.86);
+        --line: rgba(148, 163, 184, 0.23);
+        --text: #f8fafc;
+        --muted: #a8b4c7;
+        --accent: #38bdf8;
+        --accent2: #a78bfa;
+        --good: #86efac;
+        --warn: #fbbf24;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background:
+          radial-gradient(
+            circle at 15% 12%,
+            rgba(56, 189, 248, 0.2),
+            transparent 34%
+          ),
+          radial-gradient(
+            circle at 82% 18%,
+            rgba(167, 139, 250, 0.18),
+            transparent 36%
+          ),
+          linear-gradient(135deg, #020617, #0f172a 54%, #111827);
+      }
+      .page {
+        width: min(1440px, calc(100% - 28px));
+        margin: auto;
+        padding: 24px 0 38px;
+      }
+      .back-link {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        color: #bae6fd;
+        text-decoration: none;
+        font-weight: 950;
+        margin-bottom: 18px;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+      header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 18px;
+        align-items: end;
+        margin-bottom: 20px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2.2rem, 5vw, 4.7rem);
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+      }
+      .subtitle {
+        max-width: 880px;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+      .badge {
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        background: rgba(14, 165, 233, 0.12);
+        color: #bae6fd;
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-weight: 950;
+        white-space: nowrap;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: 0 24px 90px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(18px);
+      }
+      .controls {
+        padding: 20px;
+        position: sticky;
+        top: 14px;
+      }
+      .block + .block {
+        margin-top: 18px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+      h2,
+      h3 {
+        margin: 0 0 12px;
+        letter-spacing: -0.025em;
+      }
+      h2 {
+        font-size: 1.1rem;
+      }
+      label {
+        display: block;
+        margin: 12px 0 7px;
+        color: #cbd5e1;
+        font-size: 0.78rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      input,
+      select,
+      button {
+        width: 100%;
+        border-radius: 13px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        font: inherit;
+      }
+      input,
+      select {
+        color: var(--text);
+        background: rgba(2, 6, 23, 0.72);
+        padding: 11px 12px;
+        outline: none;
+      }
+      input[type="range"] {
+        padding: 0;
+        accent-color: var(--accent);
+      }
+      button {
+        cursor: pointer;
+        border: 0;
+        padding: 12px 14px;
+        color: #04111f;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        font-weight: 950;
+        transition:
+          transform 0.15s ease,
+          filter 0.15s ease;
+      }
+      button:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.08);
+      }
+      button.secondary {
+        color: var(--text);
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.28);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .value-row {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 6px;
+      }
+      .stage {
+        padding: 18px;
+      }
+      .canvas-wrap {
+        display: grid;
+        place-items: center;
+        min-height: 680px;
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(2, 6, 23, 0.72);
+      }
+      canvas {
+        width: 100%;
+        max-width: 1040px;
+        aspect-ratio: 16/10;
+        border-radius: 18px;
+        background: #020617;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      }
+      .info {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .stat {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 13px;
+        background: rgba(2, 6, 23, 0.45);
+      }
+      .stat span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .stat strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 1.25rem;
+      }
+      .log {
+        max-height: 220px;
+        overflow: auto;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+      .log li {
+        border-left: 3px solid var(--accent);
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgba(2, 6, 23, 0.45);
+        color: #dbeafe;
+        font-size: 0.84rem;
+        line-height: 1.4;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip {
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        border-radius: 999px;
+        padding: 6px 9px;
+        background: rgba(15, 23, 42, 0.65);
+        color: #dbeafe;
+        font-size: 0.78rem;
+        font-weight: 850;
+      }
+      .note {
+        color: var(--muted);
+        line-height: 1.55;
+        font-size: 0.92rem;
+      }
+      @media (max-width: 980px) {
+        header,
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .controls {
+          position: static;
+        }
+        .info {
+          grid-template-columns: 1fr;
+        }
+        .canvas-wrap {
+          min-height: auto;
+        }
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <a class="back-link" href="../index.html">← Back to Idea Lab</a>
+      <header>
+        <div>
+          <h1>Ancient Ruin / Cave Painting Generator</h1>
+          <p class="subtitle">
+            Generate textured cave walls, handprints, symbols, cracks,
+            hidden-map hints, and short archaeological interpretations from a
+            seed.
+          </p>
+        </div>
+        <div class="badge">Symbols · Lore · Texture</div>
+      </header>
+      <section class="layout">
+        <aside class="panel controls">
+          <div class="block">
+            <h2>Inscription</h2>
+            <label for="seed">Seed</label
+            ><input id="seed" value="red-hands-at-dawn" />
+            <div class="row">
+              <button id="generate">Generate ruin</button
+              ><button class="secondary" id="exportBtn">Export PNG</button>
+            </div>
+          </div>
+          <div class="block">
+            <label for="age">Age weathering</label
+            ><input id="age" type="range" min="10" max="95" value="66" />
+            <div class="value-row">
+              <span>Fresh</span><strong id="ageValue">66</strong
+              ><span>Ancient</span>
+            </div>
+            <label for="culture">Culture style</label
+            ><select id="culture">
+              <option>River clan</option>
+              <option>Sky hunters</option>
+              <option>Ember oracle</option>
+              <option>Mammoth road</option>
+            </select>
+          </div>
+          <div class="block">
+            <h2>Interpretation</h2>
+            <p class="note" id="lore">—</p>
+            <div class="chips" id="symbols"></div>
+          </div>
+          <div class="block">
+            <h2>Event log</h2>
+            <ul class="log" id="log"></ul>
+          </div>
+        </aside>
+        <section class="panel stage">
+          <div class="canvas-wrap">
+            <canvas id="canvas" width="960" height="600"></canvas>
+          </div>
+          <div class="info">
+            <div class="stat">
+              <span>Symbols</span><strong id="symbolStat">—</strong>
+            </div>
+            <div class="stat">
+              <span>Hidden map</span><strong id="mapStat">—</strong>
+            </div>
+            <div class="stat">
+              <span>Integrity</span><strong id="integrityStat">—</strong>
+            </div>
+          </div>
+        </section>
+      </section>
+      <script>
+        "use strict";
+        const c = document.getElementById("canvas"),
+          ctx = c.getContext("2d"),
+          logEl = document.getElementById("log");
+        function log(m) {
+          console.log("[Ancient Ruin Generator] " + m);
+          logEl.insertAdjacentHTML(
+            "afterbegin",
+            `<li>${new Date().toLocaleTimeString()} · ${m}</li>`,
+          );
+        }
+        function rng(s) {
+          let h = 0x811c9dc5;
+          for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193);
+          return () => {
+            h = (h + 0x6d2b79f5) >>> 0;
+            let t = Math.imul(h ^ (h >>> 15), 1 | h);
+            t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+        function generate() {
+          const r = rng(seed.value + age.value + culture.value);
+          ctx.fillStyle = "#292524";
+          ctx.fillRect(0, 0, 960, 600);
+          for (let i = 0; i < 500; i++) {
+            ctx.fillStyle = `rgba(${90 + r() * 80},${70 + r() * 55},${50 + r() * 38},${0.08 + r() * 0.18})`;
+            ctx.beginPath();
+            ctx.arc(r() * 960, r() * 600, 2 + r() * 18, 0, 7);
+            ctx.fill();
+          }
+          const syms = [
+            "handprint",
+            "aurochs",
+            "spiral",
+            "sun gate",
+            "river line",
+            "star eye",
+            "hunter",
+            "seed mark",
+          ];
+          let count = 14 + Math.floor(r() * 16);
+          for (let i = 0; i < count; i++) {
+            let x = 80 + r() * 800,
+              y = 70 + r() * 460,
+              s = 18 + r() * 36;
+            ctx.strokeStyle = ["#f97316", "#facc15", "#e7e5e4", "#991b1b"][
+              Math.floor(r() * 4)
+            ];
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.lineWidth = 3;
+            if (r() < 0.25) {
+              ctx.beginPath();
+              ctx.arc(x, y, s / 2, 0, 7);
+              ctx.stroke();
+              ctx.beginPath();
+              ctx.arc(x, y, s / 5, 0, 7);
+              ctx.stroke();
+            } else if (r() < 0.5) {
+              ctx.fillRect(x - s / 3, y - s / 2, s / 6, s);
+              for (let f = 0; f < 5; f++) {
+                ctx.beginPath();
+                ctx.arc(
+                  x - s / 3 + (f * s) / 6,
+                  y - s / 2 - r() * 8,
+                  s / 9,
+                  0,
+                  7,
+                );
+                ctx.fill();
+              }
+            } else {
+              ctx.beginPath();
+              ctx.moveTo(x, y - s / 2);
+              ctx.lineTo(x + s / 2, y + s / 2);
+              ctx.lineTo(x - s / 2, y + s / 2);
+              ctx.closePath();
+              ctx.stroke();
+            }
+          }
+          ctx.strokeStyle = "rgba(15,23,42,.55)";
+          for (let i = 0; i < +age.value * 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(r() * 960, r() * 600);
+            ctx.lineTo(r() * 960, r() * 600);
+            ctx.stroke();
+          }
+          const chosen = syms.sort(() => r() - 0.5).slice(0, 4);
+          symbols.innerHTML = chosen
+            .map((s) => `<span class="chip">${s}</span>`)
+            .join("");
+          const hasMap = r() > 0.35;
+          lore.textContent = `${culture.value} markings suggest ${chosen[0]} rituals, ${chosen[1]} warnings, and a ${hasMap ? "concealed route to a seasonal refuge" : "fragmented ceremonial calendar"}.`;
+          symbolStat.textContent = count;
+          mapStat.textContent = hasMap ? "yes" : "no";
+          integrityStat.textContent = 100 - age.value + "%";
+          log(
+            `Rendered ${count} symbols for ${culture.value}; hidden map: ${hasMap}`,
+          );
+        }
+        age.oninput = (e) => {
+          ageValue.textContent = e.target.value;
+          generate();
+        };
+        document.getElementById("generate").onclick = generate;
+        culture.onchange = generate;
+        document.getElementById("exportBtn").onclick = () => {
+          let a = document.createElement("a");
+          a.download = "ancient-ruin.png";
+          a.href = c.toDataURL();
+          a.click();
+          log("Exported ruin PNG");
+        };
+        generate();
+      </script>
+    </main>
+  </body>
+</html>
