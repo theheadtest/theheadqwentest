@@ -22,7 +22,6 @@
         --accent-2: #38bdf8;
         --accent-3: #f59e0b;
         --good: #86efac;
-        --planned: #fbbf24;
         --shadow: 0 24px 90px rgba(0, 0, 0, 0.38);
       }
 
@@ -442,14 +441,6 @@
         box-shadow: 0 20px 42px rgba(0, 0, 0, 0.24);
       }
 
-      .project-card.planned {
-        opacity: 0.9;
-      }
-
-      .project-card.planned:hover {
-        border-color: rgba(251, 191, 36, 0.52);
-      }
-
       .card-art {
         min-height: 84px;
         background:
@@ -496,12 +487,6 @@
         text-transform: uppercase;
       }
 
-      .status.planned {
-        color: var(--planned);
-        border-color: rgba(251, 191, 36, 0.34);
-        background: rgba(251, 191, 36, 0.1);
-      }
-
       .project-card h3 {
         margin: 0;
         font-size: 1.16rem;
@@ -545,10 +530,6 @@
       .arrow {
         color: var(--accent-2);
         font-size: 1.15rem;
-      }
-
-      .roadmap {
-        margin-top: 22px;
       }
 
       .empty {
@@ -665,7 +646,6 @@
           <select id="statusFilter">
             <option value="all">All statuses</option>
             <option value="live">Playable now</option>
-            
           </select>
         </div>
         <div class="field">
@@ -686,8 +666,7 @@
             <h2>Project catalog</h2>
             <p>
               Search, filter, or jump by category. Implemented projects open as
-              standalone pages; roadmap cards show the next experiments we can
-              build.
+              standalone pages.
             </p>
           </div>
           <div class="count-pill" id="resultCount">— projects</div>
@@ -893,7 +872,7 @@
           ],
           description:
             "Build playable dungeons with rooms, corridors, traps, treasure, factions, keys, doors, and validated critical paths.",
-        }
+        },
         {
           title: "Ecosystem Balance Lab",
           emoji: "📈",
@@ -909,7 +888,7 @@
           ],
           description:
             "Turn ecosystem rules into sliders, presets, heatmaps, population charts, CSV exports, and comparison scenarios.",
-        }
+        },
         {
           title: "Ancient Ruin / Cave Painting Generator",
           href: "projects/ancient-ruin-cave-painting-generator.html",
@@ -960,7 +939,7 @@
           ],
           description:
             "Compare A*, Dijkstra, BFS, greedy search, and flow fields across editable terrain costs and obstacles.",
-        }
+        },
         {
           title: "Constellation Myth Generator",
           href: "projects/constellation-myth-generator.html",
@@ -977,7 +956,7 @@
           ],
           description:
             "Generate star charts, constellation lines, zodiac-like signs, cultural myths, and seasonal visibility wheels.",
-        }
+        },
       ];
 
       const state = {
@@ -988,14 +967,12 @@
       };
 
       const grid = document.getElementById("projectGrid");
-      const roadmapGrid = document.getElementById("roadmapGrid");
       const tabs = document.getElementById("categoryTabs");
       const categoryFilter = document.getElementById("categoryFilter");
       const statusFilter = document.getElementById("statusFilter");
       const sortMode = document.getElementById("sortMode");
       const search = document.getElementById("search");
       const resultCount = document.getElementById("resultCount");
-      const roadmapCount = document.getElementById("roadmapCount");
       const emptyState = document.getElementById("emptyState");
 
       const categories = [
@@ -1015,18 +992,13 @@
 
       function renderStats() {
         const live = projects.filter((project) => project.status === "live");
-        const planned = projects.filter(
-          (project) => project.status === "planned",
-        );
         const exportTools = projects.filter((project) =>
           project.tags.some((tag) => tag.toLowerCase() === "export"),
         );
         document.getElementById("liveCount").textContent = live.length;
-        document.getElementById("plannedCount").textContent = planned.length;
         document.getElementById("categoryCount").textContent =
           categories.length - 1;
         document.getElementById("exportCount").textContent = exportTools.length;
-        roadmapCount.textContent = `${planned.length} planned`;
       }
 
       function renderCategoryControls() {
@@ -1146,16 +1118,9 @@
         grid.innerHTML = filtered.map(renderCard).join("");
         emptyState.style.display = filtered.length ? "none" : "block";
         resultCount.textContent = `${filtered.length} ${filtered.length === 1 ? "project" : "projects"}`;
-        roadmapGrid.innerHTML = sortProjects(
-          projects.filter((project) => project.status === "planned"),
-        )
-          .slice(0, 12)
-          .map(renderCard)
-          .join("");
       }
 
       function renderCard(project) {
-        const isLive = project.status === "live";
         const tagMarkup = project.tags
           .slice(0, 4)
           .map((tag) => `<span class="tag">${tag}</span>`)
@@ -1165,7 +1130,7 @@
           <div class="card-body">
             <div class="card-top">
               <span class="icon" aria-hidden="true">${project.emoji}</span>
-              <span class="status ${isLive ? "" : "planned"}">${isLive ? "Playable" : "Planned"}</span>
+              <span class="status">Playable</span>
             </div>
             <div>
               <h3>${project.title}</h3>
@@ -1174,14 +1139,11 @@
             <div class="tags">${tagMarkup}</div>
             <div class="card-footer">
               <span>${project.category} · ${project.complexity}</span>
-              <span class="arrow">${isLive ? "Open →" : "Roadmap"}</span>
+              <span class="arrow">Open →</span>
             </div>
           </div>`;
 
-        if (isLive && project.href) {
-          return `<a class="project-card" href="${project.href}">${cardContent}</a>`;
-        }
-        return `<article class="project-card planned" aria-label="${project.title} planned project">${cardContent}</article>`;
+        return `<a class="project-card" href="${project.href}">${cardContent}</a>`;
       }
 
       init();
