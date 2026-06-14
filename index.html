@@ -620,7 +620,6 @@
             <button class="btn secondary" id="randomProject" type="button">
               Open random project
             </button>
-            <a class="btn secondary" href="#roadmap">View roadmap</a>
           </div>
         </div>
 
@@ -629,10 +628,6 @@
             <div class="stat-card stat">
               <span>Playable now</span>
               <strong id="liveCount">—</strong>
-            </div>
-            <div class="stat-card stat">
-              <span>Roadmap ideas</span>
-              <strong id="plannedCount">—</strong>
             </div>
             <div class="stat-card stat">
               <span>Categories</span>
@@ -670,7 +665,7 @@
           <select id="statusFilter">
             <option value="all">All statuses</option>
             <option value="live">Playable now</option>
-            <option value="planned">Roadmap</option>
+            
           </select>
         </div>
         <div class="field">
@@ -702,21 +697,6 @@
           No projects match these filters yet. Try a broader search or switch
           category.
         </div>
-      </section>
-
-      <section class="section-panel roadmap" id="roadmap">
-        <div class="section-head">
-          <div>
-            <h2>Build roadmap</h2>
-            <p>
-              A backlog of the “let’s do it all” ideas, grouped so the lab can
-              grow in focused batches without turning the homepage into a wall
-              of links.
-            </p>
-          </div>
-          <div class="count-pill" id="roadmapCount">— planned</div>
-        </div>
-        <div class="project-grid" id="roadmapGrid"></div>
       </section>
 
       <footer>
@@ -913,82 +893,7 @@
           ],
           description:
             "Build playable dungeons with rooms, corridors, traps, treasure, factions, keys, doors, and validated critical paths.",
-        },
-        {
-          title: "Biome Evolution Timeline",
-          emoji: "🌍",
-          category: "Worlds & Maps",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Climate", "Timeline", "Biomes"],
-          tones: [
-            "rgba(34,197,94,.38)",
-            "rgba(59,130,246,.32)",
-            "rgba(248,250,252,.2)",
-          ],
-          description:
-            "Animate continents through ice ages, sea-level shifts, desertification, forest expansion, and extinction events.",
-        },
-        {
-          title: "Civilization Spread Simulator",
-          emoji: "🏛️",
-          category: "Life & Simulation",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Borders", "Trade", "History"],
-          tones: [
-            "rgba(251,191,36,.36)",
-            "rgba(168,85,247,.24)",
-            "rgba(34,197,94,.24)",
-          ],
-          description:
-            "Watch cultures expand across terrain, found capitals, form borders, compete for resources, trade, and collapse.",
-        },
-        {
-          title: "Watershed & River Basin Lab",
-          emoji: "🌊",
-          category: "Worlds & Maps",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Hydrology", "Erosion", "Floods"],
-          tones: [
-            "rgba(14,165,233,.44)",
-            "rgba(34,197,94,.22)",
-            "rgba(120,113,108,.24)",
-          ],
-          description:
-            "Simulate rainfall, downhill flow, erosion, sediment, lakes, deltas, and floodplain overlays on editable terrain.",
-        },
-        {
-          title: "Planetary Colony Planner",
-          emoji: "🚀",
-          category: "Space",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Colony", "Resources", "Risk"],
-          tones: [
-            "rgba(248,250,252,.28)",
-            "rgba(251,191,36,.28)",
-            "rgba(56,189,248,.26)",
-          ],
-          description:
-            "Pick landing sites and place colony modules while tracking oxygen, power, water, hazards, and mission reports.",
-        },
-        {
-          title: "World Map Story Prompt Generator",
-          emoji: "📜",
-          category: "Art & Worldbuilding",
-          status: "planned",
-          complexity: "Medium",
-          tags: ["Lore", "Kingdoms", "Export"],
-          tones: [
-            "rgba(251,191,36,.36)",
-            "rgba(168,85,247,.22)",
-            "rgba(34,197,94,.22)",
-          ],
-          description:
-            "Layer kingdoms, ruins, religions, conflicts, trade routes, legends, and adventure hooks over generated maps.",
-        },
+        }
         {
           title: "Ecosystem Balance Lab",
           emoji: "📈",
@@ -1004,187 +909,7 @@
           ],
           description:
             "Turn ecosystem rules into sliders, presets, heatmaps, population charts, CSV exports, and comparison scenarios.",
-        },
-        {
-          title: "Ant Colony Simulator",
-          emoji: "🐜",
-          category: "Life & Simulation",
-          status: "planned",
-          complexity: "Medium",
-          tags: ["Agents", "Pheromones", "Grid"],
-          tones: [
-            "rgba(120,53,15,.42)",
-            "rgba(251,191,36,.26)",
-            "rgba(34,197,94,.22)",
-          ],
-          description:
-            "Paint nests, food, and obstacles, then watch ants form pheromone trails through exploration and evaporation.",
-        },
-        {
-          title: "Weather System Sandbox",
-          emoji: "⛈️",
-          category: "Life & Simulation",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Wind", "Clouds", "Rain"],
-          tones: [
-            "rgba(59,130,246,.38)",
-            "rgba(248,250,252,.28)",
-            "rgba(15,23,42,.4)",
-          ],
-          description:
-            "Animate wind, pressure, temperature, clouds, rain shadows, storms, snowlines, and seasonal overlays.",
-        },
-        {
-          title: "Island Survival Map",
-          emoji: "🏝️",
-          category: "Game Tools",
-          status: "planned",
-          complexity: "Medium",
-          tags: ["Resources", "Hazards", "Routes"],
-          tones: [
-            "rgba(34,197,94,.38)",
-            "rgba(56,189,248,.32)",
-            "rgba(251,191,36,.26)",
-          ],
-          description:
-            "Generate survival islands with resources, shelters, hazards, route planning, base scores, and expedition logs.",
-        },
-        {
-          title: "Castle & Fortress Generator",
-          emoji: "🏰",
-          category: "Game Tools",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Voxel", "Defense", "Rooms"],
-          tones: [
-            "rgba(148,163,184,.42)",
-            "rgba(251,191,36,.22)",
-            "rgba(34,197,94,.2)",
-          ],
-          description:
-            "Generate keeps, walls, towers, moats, courtyards, gates, terrain integration, and siege-readiness overlays.",
-        },
-        {
-          title: "Village Life Simulator",
-          emoji: "🏡",
-          category: "Life & Simulation",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Agents", "Schedules", "Events"],
-          tones: [
-            "rgba(34,197,94,.36)",
-            "rgba(251,191,36,.3)",
-            "rgba(244,114,182,.18)",
-          ],
-          description:
-            "Generate a village and simulate villagers farming, trading, sleeping, celebrating, and reacting to emergencies.",
-        },
-        {
-          title: "Creature Evolution Sandbox",
-          emoji: "🧬",
-          category: "Life & Simulation",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Traits", "Mutation", "Selection"],
-          tones: [
-            "rgba(34,197,94,.36)",
-            "rgba(168,85,247,.34)",
-            "rgba(56,189,248,.2)",
-          ],
-          description:
-            "Let creatures evolve speed, size, vision, diet, camouflage, and reproduction traits across generations.",
-        },
-        {
-          title: "Spaceship Interior Generator",
-          emoji: "🛸",
-          category: "Space",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Deckplan", "Rooms", "Sci-fi"],
-          tones: [
-            "rgba(56,189,248,.32)",
-            "rgba(148,163,184,.28)",
-            "rgba(168,85,247,.22)",
-          ],
-          description:
-            "Generate ship deck plans with corridors, reactors, medbays, bridges, cargo holds, hazards, and escape routes.",
-        },
-        {
-          title: "Procedural Language Lab",
-          emoji: "🔤",
-          category: "Art & Worldbuilding",
-          status: "planned",
-          complexity: "Medium",
-          tags: ["Names", "Phonemes", "Cultures"],
-          tones: [
-            "rgba(244,114,182,.32)",
-            "rgba(251,191,36,.24)",
-            "rgba(56,189,248,.2)",
-          ],
-          description:
-            "Build phoneme inventories, sound rules, place-name families, lexicons, inscriptions, and culture-consistent names.",
-        },
-        {
-          title: "Procedural Music & Ambience",
-          emoji: "🎼",
-          category: "Art & Worldbuilding",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Web Audio", "Mood", "Loops"],
-          tones: [
-            "rgba(168,85,247,.38)",
-            "rgba(56,189,248,.28)",
-            "rgba(251,191,36,.2)",
-          ],
-          description:
-            "Generate seeded ambience loops for forests, caves, space, cities, dungeons, oceans, and volcanic worlds.",
-        },
-        {
-          title: "Terrain Brush Playground",
-          emoji: "🖌️",
-          category: "Worlds & Maps",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Editing", "Heightmap", "Undo"],
-          tones: [
-            "rgba(34,197,94,.36)",
-            "rgba(120,113,108,.34)",
-            "rgba(56,189,248,.18)",
-          ],
-          description:
-            "Raise, lower, smooth, erode, flood, paint biomes, recompute rivers, and export heightmaps from an editable terrain.",
-        },
-        {
-          title: "Cellular Automata Zoo",
-          emoji: "🔲",
-          category: "Life & Simulation",
-          status: "planned",
-          complexity: "Medium",
-          tags: ["Rules", "Patterns", "Compare"],
-          tones: [
-            "rgba(148,163,184,.36)",
-            "rgba(34,197,94,.28)",
-            "rgba(59,130,246,.22)",
-          ],
-          description:
-            "Collect Game of Life, forest fire, traffic, disease, cave, and reaction-diffusion automata with rule editing.",
-        },
-        {
-          title: "Disease / Rumor Spread Simulator",
-          emoji: "🗣️",
-          category: "Life & Simulation",
-          status: "planned",
-          complexity: "Medium",
-          tags: ["Network", "Intervention", "Timeline"],
-          tones: [
-            "rgba(239,68,68,.3)",
-            "rgba(56,189,248,.22)",
-            "rgba(251,191,36,.2)",
-          ],
-          description:
-            "Model simplified spread across population nodes, travel networks, immunity, mutations, and intervention strategies.",
-        },
+        }
         {
           title: "Ancient Ruin / Cave Painting Generator",
           href: "projects/ancient-ruin-cave-painting-generator.html",
@@ -1235,82 +960,7 @@
           ],
           description:
             "Compare A*, Dijkstra, BFS, greedy search, and flow fields across editable terrain costs and obstacles.",
-        },
-        {
-          title: "Trade Route Generator",
-          emoji: "🛤️",
-          category: "Worlds & Maps",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Cities", "Resources", "Economy"],
-          tones: [
-            "rgba(251,191,36,.34)",
-            "rgba(56,189,248,.22)",
-            "rgba(34,197,94,.22)",
-          ],
-          description:
-            "Place cities and simulate trade routes based on resources, rivers, mountain passes, ports, costs, and risk.",
-        },
-        {
-          title: "Seed Explorer",
-          emoji: "🌱",
-          category: "Art & Worldbuilding",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Meta", "World Bible", "Share"],
-          tones: [
-            "rgba(34,197,94,.36)",
-            "rgba(168,85,247,.28)",
-            "rgba(56,189,248,.22)",
-          ],
-          description:
-            "Enter one seed and see its map, planet, voxel scene, ecosystem, names, symbols, lore, and shareable world bible.",
-        },
-        {
-          title: "Puzzle Island Generator",
-          emoji: "🧩",
-          category: "Game Tools",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Solvable", "Keys", "Routes"],
-          tones: [
-            "rgba(34,197,94,.34)",
-            "rgba(56,189,248,.26)",
-            "rgba(251,191,36,.22)",
-          ],
-          description:
-            "Generate small islands with keys, gates, bridges, switches, water levels, routes, and solution validation.",
-        },
-        {
-          title: "Fire & Disaster Simulator",
-          emoji: "🔥",
-          category: "Life & Simulation",
-          status: "planned",
-          complexity: "Medium",
-          tags: ["Fire", "Flood", "Mitigation"],
-          tones: [
-            "rgba(239,68,68,.38)",
-            "rgba(251,191,36,.28)",
-            "rgba(59,130,246,.2)",
-          ],
-          description:
-            "Simulate wildfire, flood, lava, toxic gas, or avalanche spread with wind, slope, barriers, and history overlays.",
-        },
-        {
-          title: "Material & Texture Lab",
-          emoji: "🧱",
-          category: "Art & Worldbuilding",
-          status: "planned",
-          complexity: "Medium",
-          tags: ["Textures", "Tileable", "Export"],
-          tones: [
-            "rgba(120,113,108,.36)",
-            "rgba(249,115,22,.26)",
-            "rgba(56,189,248,.18)",
-          ],
-          description:
-            "Generate seamless grass, rock, lava, ice, sand, water, alien mycelium, cloud, and wood textures.",
-        },
+        }
         {
           title: "Constellation Myth Generator",
           href: "projects/constellation-myth-generator.html",
@@ -1327,37 +977,7 @@
           ],
           description:
             "Generate star charts, constellation lines, zodiac-like signs, cultural myths, and seasonal visibility wheels.",
-        },
-        {
-          title: "Underwater Reef Simulator",
-          emoji: "🐠",
-          category: "Life & Simulation",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Coral", "Fish", "Currents"],
-          tones: [
-            "rgba(20,184,166,.38)",
-            "rgba(56,189,248,.28)",
-            "rgba(244,114,182,.22)",
-          ],
-          description:
-            "Simulate coral, algae, fish, predators, currents, bleaching, recovery, and reef-health statistics.",
-        },
-        {
-          title: "Living Planet Simulator",
-          emoji: "🌐",
-          category: "Space",
-          status: "planned",
-          complexity: "Advanced",
-          tags: ["Seasons", "Clouds", "Cities"],
-          tones: [
-            "rgba(56,189,248,.36)",
-            "rgba(34,197,94,.26)",
-            "rgba(248,250,252,.2)",
-          ],
-          description:
-            "Animate a planet over time with seasons, vegetation cycles, moving clouds, ice caps, eruptions, and city lights.",
-        },
+        }
       ];
 
       const state = {
