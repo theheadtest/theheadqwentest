@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Procedural Galaxy Explorer - Idea Lab</title>
+    <link rel="stylesheet" href="galaxy-explorer.css" />
+  </head>
+  <body>
+    <main class="page">
+      <a class="back-link" href="../index.html">← Back to Idea Lab</a>
+      <header>
+        <div>
+          <h1>Procedural Galaxy Explorer</h1>
+          <p class="subtitle">
+            Generate a spiral galaxy, click one of 100 catalog stars to open its
+            seeded solar system, then inspect stars, planets, and satellites
+            with cached session-stable visuals.
+          </p>
+        </div>
+        <div class="badge" id="modeBadge">Galaxy Mode</div>
+      </header>
+
+      <section class="layout">
+        <aside class="panel controls">
+          <div class="control-block">
+            <h2>Navigation</h2>
+            <div class="crumbs" id="breadcrumbs">Galaxy</div>
+            <div class="row">
+              <button id="backView" class="secondary">Back</button>
+              <button id="homeView" class="secondary">Galaxy</button>
+            </div>
+          </div>
+
+          <div class="control-block" data-panel="galaxy">
+            <h2>Galaxy seed</h2>
+            <label for="seed">Seed</label>
+            <input id="seed" value="spiral-voyage-512" spellcheck="false" />
+            <div class="row">
+              <button id="generate">Generate</button>
+              <button id="randomize" class="secondary">Random Seed</button>
+            </div>
+            <label for="arms">Spiral arms</label>
+            <input id="arms" type="range" min="2" max="6" value="4" />
+            <div class="value-row">
+              <span>grand design</span><strong id="armsValue">4</strong>
+            </div>
+            <label for="dust">Dust lanes</label>
+            <input
+              id="dust"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.58"
+            />
+            <div class="value-row">
+              <span>clear</span><strong id="dustValue">0.58</strong>
+            </div>
+          </div>
+
+          <div class="control-block" data-panel="system">
+            <h2>System view</h2>
+            <label for="systemSpeed">Animation speed</label>
+            <input
+              id="systemSpeed"
+              type="range"
+              min="0"
+              max="3"
+              step="0.05"
+              value="1"
+            />
+            <div class="value-row">
+              <span>paused</span><strong id="systemSpeedValue">1.00×</strong>
+            </div>
+            <div class="toggles">
+              <label class="checkline"
+                ><input id="showLabels" type="checkbox" checked /> Labels</label
+              >
+              <label class="checkline"
+                ><input id="showHabitable" type="checkbox" checked /> Habitable
+                zone</label
+              >
+              <label class="checkline"
+                ><input id="showMoons" type="checkbox" checked />
+                Satellites</label
+              >
+              <label class="checkline"
+                ><input id="showTrails" type="checkbox" checked /> Orbit
+                trails</label
+              >
+            </div>
+          </div>
+
+          <div class="control-block" data-panel="body">
+            <h2>Body view</h2>
+            <label for="renderSize">Render quality</label>
+            <select id="renderSize">
+              <option value="180">Fast · 180px</option>
+              <option value="260" selected>Balanced · 260px</option>
+              <option value="360">Detailed · 360px</option>
+            </select>
+            <label for="bodySpeed">Rotation speed</label>
+            <input
+              id="bodySpeed"
+              type="range"
+              min="0"
+              max="2"
+              step="0.05"
+              value="0.65"
+            />
+            <div class="value-row">
+              <span>still</span><strong id="bodySpeedValue">0.65×</strong>
+            </div>
+            <label for="relief">Relief strength</label>
+            <input
+              id="relief"
+              type="range"
+              min="0.25"
+              max="1.8"
+              step="0.05"
+              value="1"
+            />
+            <div class="value-row">
+              <span>smooth</span><strong id="reliefValue">1.00×</strong>
+            </div>
+            <div class="toggles">
+              <label class="checkline"
+                ><input id="showClouds" type="checkbox" checked /> Clouds /
+                corona details</label
+              >
+            </div>
+          </div>
+
+          <div class="control-block">
+            <h2>Actions</h2>
+            <button id="download" class="secondary">Download PNG</button>
+            <button id="clearLog" class="secondary">Clear Logs</button>
+          </div>
+        </aside>
+
+        <section>
+          <div class="panel stage">
+            <div class="canvas-wrap">
+              <canvas
+                id="explorer"
+                width="920"
+                height="720"
+                aria-label="Generated galaxy explorer canvas"
+              ></canvas>
+              <div class="hint" id="hint">
+                Click a bright catalog star to explore its system.
+              </div>
+            </div>
+            <div class="info-grid">
+              <div class="metric">
+                <span>Selection</span
+                ><strong id="metricSelection">Galaxy</strong>
+              </div>
+              <div class="metric">
+                <span>Objects</span><strong id="metricObjects">—</strong>
+              </div>
+              <div class="metric">
+                <span>Cache</span><strong id="metricCache">—</strong>
+              </div>
+              <div class="metric">
+                <span>Renderer</span><strong>Canvas 2D</strong>
+              </div>
+            </div>
+            <div class="description" id="description"></div>
+          </div>
+          <div class="panel card-panel">
+            <div id="cards" class="cards"></div>
+          </div>
+          <div class="panel log-panel">
+            <div class="log-header"><h2>Diagnostics</h2></div>
+            <div id="log" class="log"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script src="galaxy-explorer.js"></script>
+  </body>
+</html>
