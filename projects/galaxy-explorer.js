@@ -19,6 +19,8 @@ const ui = {
   showHabitable: $("showHabitable"),
   showMoons: $("showMoons"),
   showTrails: $("showTrails"),
+  rotateGalaxy: $("rotateGalaxy"),
+  showStarNames: $("showStarNames"),
   renderSize: $("renderSize"),
   bodySpeed: $("bodySpeed"),
   relief: $("relief"),
@@ -356,7 +358,7 @@ function generateGalaxy() {
     stars.push({
       ...p,
       id: `S-${String(i + 1).padStart(3, "0")}`,
-      name: `${rng.pick(["Astra", "Vela", "Nereid", "Orion", "Lumen", "Cinder", "Mira", "Thal", "Eos", "Nyx"])}-${i + 1}`,
+      name: makeStarName(rng, i),
       seed: `${seed}:star:${i}`,
       classKey: cls,
       star: st,
@@ -375,6 +377,24 @@ function generateGalaxy() {
     `${decor.length} decorative stars, ${stars.length} catalog stars, ${arms} arms`,
   );
   updateUi();
+}
+function makeStarName(rng, i) {
+  const prefixes = [
+      "Astra",
+      "Vela",
+      "Nereid",
+      "Orion",
+      "Lumen",
+      "Cinder",
+      "Mira",
+      "Thal",
+      "Eos",
+      "Nyx",
+      "Syrma",
+      "Kael",
+    ],
+    suffixes = ["Prime", "Reach", "Vigil", "Harbor", "Crown", "Gate"];
+  return `${rng.pick(prefixes)} ${rng.pick(suffixes)} ${i + 1}`;
 }
 function makeGalaxyPoint(rng, noise, arms, cx, cy, rx, ry, i, active) {
   const arm = rng.int(0, arms - 1),
@@ -401,7 +421,7 @@ function makeGalaxyPoint(rng, noise, arms, cx, cy, rx, ry, i, active) {
     size: active ? 2 + mag * 3 : 0.35 + mag * 1.9,
   };
 }
-function pickClass(r, rng) {
+function pickClass(rng, r) {
   const x = rng.next() + r * 0.25;
   return x < 0.35
     ? "M"
@@ -628,31 +648,53 @@ function draw(ts = 0) {
   else drawBody(dt);
   requestAnimationFrame(draw);
 }
+function rotatePoint(x, y, cx, cy, angle) {
+  const dx = x - cx,
+    dy = y - cy,
+    ca = Math.cos(angle),
+    sa = Math.sin(angle);
+  return [cx + dx * ca - dy * sa, cy + dx * sa + dy * ca];
+}
 function drawGalaxy() {
   const g = app.galaxy;
   if (!g) return;
-  const grd = ctx.createRadialGradient(460, 350, 20, 460, 350, 650);
+  const cx = canvas.width / 2,
+    cy = canvas.height / 2,
+    angle = ui.rotateGalaxy.checked ? app.time * 0.015 : 0;
+  const grd = ctx.createRadialGradient(cx, cy, 20, cx, cy, 650);
   grd.addColorStop(0, "#111b3d");
   grd.addColorStop(1, "#020617");
   ctx.fillStyle = grd;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.globalCompositeOperation = "lighter";
   for (const s of g.decor) {
+    const [x, y] = rotatePoint(s.x, s.y, cx, cy, angle);
     ctx.globalAlpha = s.alpha;
     ctx.fillStyle = s.mag > 0.75 ? "#fde68a" : "#dbeafe";
     ctx.beginPath();
-    ctx.arc(s.x, s.y, s.size, 0, TAU);
+    ctx.arc(x, y, s.size, 0, TAU);
     ctx.fill();
   }
   for (const s of g.stars) {
+    const [x, y] = rotatePoint(s.x, s.y, cx, cy, angle);
     ctx.globalAlpha = 0.95;
     ctx.shadowColor = s.star.glow;
     ctx.shadowBlur = 10 + s.mag * 12;
     ctx.fillStyle = s.color;
     ctx.beginPath();
-    ctx.arc(s.x, s.y, s.radius, 0, TAU);
+    ctx.arc(x, y, s.radius, 0, TAU);
     ctx.fill();
-    app.hit.push({ type: "star", x: s.x, y: s.y, r: s.radius + 8, payload: s });
+    app.hit.push({ type: "star", x, y, r: s.radius + 8, payload: s });
+    if (ui.showStarNames.checked) {
+      ctx.shadowBlur = 0;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = "#dbeafe";
+      ctx.font = "700 11px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(s.name, x, y - s.radius - 8);
+      ctx.globalCompositeOperation = "lighter";
+    }
   }
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
@@ -846,6 +888,41 @@ function drawBody(dt) {
   ctx.shadowBlur = b.kind === "star" ? 55 : 24;
   ctx.drawImage(off, dx, dy, ds, ds);
   ctx.shadowBlur = 0;
+  drawBodySatellites(b, dx + ds / 2, dy + ds / 2, ds * 0.5);
+}
+function drawBodySatellites(body, cx, cy, planetRadius) {
+  if (body.kind !== "planet" || !body.moons?.length || !ui.showMoons.checked)
+    return;
+  ctx.save();
+  ctx.font = "700 12px system-ui";
+  ctx.textAlign = "center";
+  for (const [i, moon] of body.moons.entries()) {
+    const orbit = planetRadius + 26 + i * 17,
+      angle = moon.angle + app.time * (0.65 + moon.speed),
+      x = cx + Math.cos(angle) * orbit,
+      y = cy + Math.sin(angle) * orbit * 0.42,
+      r = clamp(moon.radius * 1.4, 3, 8);
+    ctx.strokeStyle = "rgba(148,163,184,.18)";
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, orbit, orbit * 0.42, 0, 0, TAU);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(226,232,240,.92)";
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fill();
+    if (ui.showLabels.checked) {
+      ctx.fillStyle = "rgba(226,232,240,.86)";
+      ctx.fillText(moon.name, x, y - r - 7);
+    }
+    app.hit.push({
+      type: "body",
+      x,
+      y,
+      r: Math.max(10, r + 5),
+      payload: { kind: "moon", ...moon },
+    });
+  }
+  ctx.restore();
 }
 function updateUi() {
   document
