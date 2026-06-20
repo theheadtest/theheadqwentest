@@ -4,8 +4,8 @@
 
 `galaxy-explorer.html` unifies the earlier space projects into a single static GitHub Pages-friendly experience:
 
-1. Generate a seeded spiral galaxy.
-2. Click one of 100 active catalog stars to generate its solar system.
+1. Generate a seeded, gently rotating spiral galaxy.
+2. Click one of 100 active catalog stars to generate its named solar system.
 3. Click the central star, planets, or satellites to generate a stable visual portrait.
 
 The implementation intentionally uses plain HTML, CSS, and JavaScript with no build step.
@@ -23,9 +23,9 @@ All major objects use hierarchical seed-derived generation. The galaxy seed crea
 Default object counts:
 
 - 2,000 decorative galaxy stars.
-- 100 active catalog stars.
+- 100 active, deterministically named catalog stars.
 - 4–9 generated planets per system.
-- Satellites are first-class objects for click handling and body generation.
+- Satellites are first-class objects for click handling, system rendering, body generation, and planet-view orbit overlays.
 
 ## Session cache
 
@@ -40,17 +40,19 @@ The cache is intentionally session-only. If future work needs reload-surviving s
 
 The app has three main modes:
 
-- `galaxy` — spiral galaxy and active catalog stars.
+- `galaxy` — spiral galaxy and active catalog stars. The map can rotate gently around the canvas center, and catalog star names can be toggled on for easier navigation.
 - `system` — selected star system with animated planets and satellites.
-- `body` — portrait renderer for a selected star, planet, or satellite.
+- `body` — portrait renderer for a selected star, planet, or satellite. When viewing a planet with satellites, the body view also draws the planet's moons in orbit around the portrait.
 
-Canvas click handling uses the current frame's `app.hit` array. Any future interactive object should add a hit target while drawing.
+Canvas click handling uses the current frame's `app.hit` array. Any future interactive object should add a hit target while drawing. If a view visually transforms objects, such as the rotating galaxy map, hit targets should be pushed with the transformed screen coordinates.
 
 ## Body rendering
 
 Planet and satellite portraits use a compact sphere renderer inspired by `planet-generator.html`: screen pixels map to a rotating sphere, sample seeded 3D noise, then receive simple lighting and optional clouds.
 
 Stars use a separate generator path rather than planet terrain materials. The star path renders self-emissive plasma-like noise, class-specific colors, and stronger glow.
+
+Planet body views render satellite orbit overlays after the main portrait. These overlays respect the existing system labels and satellite visibility toggles, and their moon hit targets allow drilling into satellite portraits directly from planet view.
 
 ## Future improvements
 
