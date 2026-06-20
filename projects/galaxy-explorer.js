@@ -401,7 +401,7 @@ function makeGalaxyPoint(rng, noise, arms, cx, cy, rx, ry, i, active) {
     size: active ? 2 + mag * 3 : 0.35 + mag * 1.9,
   };
 }
-function pickClass(r, rng) {
+function pickClass(rng, r) {
   const x = rng.next() + r * 0.25;
   return x < 0.35
     ? "M"
